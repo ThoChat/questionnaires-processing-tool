@@ -1,0 +1,400 @@
+from typing import Sequence
+
+
+class Checkbox:
+    size_x: int = 60
+    size_y: int = 70
+
+    def __init__(self, page: int, dx: int, dy: int, text: str):
+        self.page = page
+        self.dx = dx
+        self.dy = dy
+        self.text = text
+
+
+class Freetext:
+    def __init__(self, page: int, dx: int, dy: int, size_x: int, size_y: int):
+        self.page = page
+        self.dx = dx
+        self.dy = dy
+        self.size_x = size_x
+        self.size_y = size_y
+
+
+class CheckTable:
+    def __init__(
+        self,
+        page: int,
+        dx: Sequence[int],
+        dy: int,
+        size_x: Sequence[int],
+        size_y: int,
+        columns: Sequence[str],
+        rows: Sequence[str],
+    ):
+        self.page = page
+        self.dx = dx
+        self.dy = dy
+        self.size_x = size_x
+        self.size_y = size_y
+        self.columns = columns
+        self.rows = rows
+
+
+class Diagramm:
+    def __init__(self, page: int, corner_ids: Sequence[int] = [12, 11, 13, 14]):
+        self.page = page
+        self.corner_ids = corner_ids
+
+
+class Question:
+    def __init__(
+        self,
+        num: int,
+        checkboxes: Sequence[Checkbox] = [],
+        texts: Sequence[Freetext] = [],
+        diagramms: Sequence[Diagramm] = [],
+        tables: Sequence[CheckTable] = [],
+    ):
+        self.num = num
+        self.checkboxes = checkboxes
+        self.texts = texts
+        self.diagramms = diagramms
+        self.tables = tables
+
+
+class Template:
+    def get_num_pages(self) -> int:
+        return 0
+
+    def get_questions(self) -> Sequence[Question]:
+        return []
+
+
+class Bottleneck(Template):
+    def __init__(self) -> None:
+        question1 = Question(
+            num=1,
+            checkboxes=[
+                Checkbox(page=1, dx=37, dy=800, text="ja"),
+                Checkbox(page=1, dx=37, dy=1385, text="nein"),
+                Checkbox(page=1, dx=37, dy=1505, text="weiss nicht"),
+            ],
+            texts=[Freetext(page=1, dx=380, dy=1110, size_x=2800, size_y=390)],
+        )
+        question2 = Question(
+            num=2,
+            checkboxes=[
+                Checkbox(page=1, dx=37, dy=1939, text="sehr wohl"),
+                Checkbox(page=1, dx=37, dy=2059, text="eher wohl"),
+                Checkbox(page=1, dx=37, dy=2183, text="neutral"),
+                Checkbox(page=1, dx=37, dy=2306, text="eher unwohl"),
+                Checkbox(page=1, dx=37, dy=2430, text="sehr unwohl"),
+            ],
+        )
+        question3 = Question(
+            num=3,
+            checkboxes=[
+                Checkbox(page=1, dx=37, dy=2860, text="nein"),
+                Checkbox(page=1, dx=37, dy=2986, text="leicht"),
+                Checkbox(page=1, dx=37, dy=3109, text="mittel"),
+                Checkbox(page=1, dx=37, dy=3232, text="stark"),
+            ],
+        )
+        question4 = Question(
+            num=4,
+            checkboxes=[
+                Checkbox(page=1, dx=37, dy=3764, text="sehr gut"),
+                Checkbox(page=1, dx=37, dy=3886, text="gut"),
+                Checkbox(page=1, dx=37, dy=4006, text="neutral"),
+                Checkbox(page=1, dx=37, dy=4130, text="eher gering"),
+                Checkbox(page=1, dx=37, dy=4251, text="gering"),
+            ],
+        )
+        question5 = Question(
+            num=5,
+            checkboxes=[
+                Checkbox(page=2, dx=37, dy=455, text="sehr hoch"),
+                Checkbox(page=2, dx=37, dy=575, text="hoch"),
+                Checkbox(page=2, dx=37, dy=697, text="neutral"),
+                Checkbox(page=2, dx=37, dy=819, text="eher gering"),
+                Checkbox(page=2, dx=37, dy=941, text="gering"),
+            ],
+        )
+        question6 = Question(
+            num=6,
+            checkboxes=[
+                Checkbox(page=2, dx=37, dy=1472, text="Ja"),
+                Checkbox(page=2, dx=37, dy=1836, text="Nein"),
+            ],
+            texts=[Freetext(page=2, dx=380, dy=1660, size_x=2800, size_y=275)],
+        )
+        question7 = Question(
+            num=7,
+            checkboxes=[
+                Checkbox(page=2, dx=37, dy=2487, text="Ja"),
+                Checkbox(page=2, dx=37, dy=2851, text="Nein"),
+            ],
+            texts=[Freetext(page=2, dx=380, dy=2680, size_x=2800, size_y=275)],
+        )
+        question8 = Question(
+            num=8,
+            checkboxes=[
+                Checkbox(page=2, dx=37, dy=3386, text="Abstand gehalten"),
+                Checkbox(page=2, dx=37, dy=3509, text="neutral"),
+                Checkbox(page=2, dx=37, dy=3631, text="naeher heran gegangen"),
+            ],
+        )
+        question9 = Question(
+            num=9,
+            checkboxes=[
+                Checkbox(page=2, dx=37, dy=4279, text="sehr gut"),
+                Checkbox(page=2, dx=37, dy=4400, text="gut"),
+                Checkbox(page=2, dx=37, dy=4522, text="neutral"),
+                Checkbox(page=2, dx=37, dy=4647, text="eher gering"),
+                Checkbox(page=2, dx=37, dy=4769, text="gering"),
+            ],
+        )
+        question10 = Question(
+            num=10,
+            checkboxes=[
+                Checkbox(page=3, dx=37, dy=454, text="wenig"),
+                Checkbox(page=3, dx=37, dy=576, text="neutral"),
+                Checkbox(page=3, dx=37, dy=698, text="stark"),
+            ],
+        )
+        question11 = Question(
+            num=11,
+            checkboxes=[
+                Checkbox(page=3, dx=37, dy=1323, text="ja"),
+                Checkbox(page=3, dx=37, dy=1446, text="nein"),
+                Checkbox(page=3, dx=37, dy=1571, text="weiss nicht"),
+            ],
+        )
+        question12 = Question(
+            num=12,
+            checkboxes=[
+                Checkbox(
+                    page=3, dx=37, dy=2100, text="hinter dem Ruecken verschraenkt"
+                ),
+                Checkbox(page=3, dx=37, dy=2223, text="vor dem Bauch verschraenkt"),
+                Checkbox(page=3, dx=37, dy=2347, text="vor der Brust verschraenkt"),
+                Checkbox(page=3, dx=37, dy=2469, text="in die Huefte gestuetzt"),
+                Checkbox(page=3, dx=37, dy=2592, text="seitlich herabhaengend"),
+                Checkbox(
+                    page=3,
+                    dx=37,
+                    dy=2716,
+                    text="Arme nach vorne gerichtet, ggf. leicht gestreckt",
+                ),
+                Checkbox(
+                    page=3,
+                    dx=37,
+                    dy=2837,
+                    text="Haende nah vor dem Oberkoerper auf Brusthoehe",
+                ),
+                Checkbox(page=3, dx=37, dy=2961, text="Andere Haltung:"),
+            ],
+            texts=[Freetext(page=3, dx=830, dy=2930, size_x=2370, size_y=130)],
+        )
+        question13 = Question(
+            num=13,
+            checkboxes=[
+                Checkbox(page=3, dx=37, dy=3495, text="ja, deutlich"),
+                Checkbox(page=3, dx=37, dy=3617, text="eher ja"),
+                Checkbox(page=3, dx=37, dy=3740, text="eher nein"),
+                Checkbox(page=3, dx=37, dy=3864, text="nein, gar nicht"),
+            ],
+        )
+        question14 = Question(
+            num=14,
+            checkboxes=[
+                Checkbox(page=4, dx=37, dy=452, text="Druck auf Vordermann ausueben"),
+                Checkbox(page=4, dx=37, dy=575, text="Schutz des eigenen Koerpers"),
+                Checkbox(
+                    page=4,
+                    dx=37,
+                    dy=696,
+                    text="Platz schaffen beziehungsweise Raum halten",
+                ),
+                Checkbox(
+                    page=4, dx=37, dy=818, text="Gleichgewicht bewusst unterstuetzen"
+                ),
+                Checkbox(
+                    page=4,
+                    dx=37,
+                    dy=940,
+                    text="unbewusste Bewegung ohne klare Funktion",
+                ),
+                Checkbox(page=4, dx=37, dy=1062, text="keine Funktion"),
+                Checkbox(page=4, dx=37, dy=1186, text="Andere Funktion:"),
+            ],
+            texts=[Freetext(page=4, dx=880, dy=1150, size_x=2330, size_y=130)],
+        )
+        question15 = Question(
+            num=15,
+            checkboxes=[
+                Checkbox(page=4, dx=37, dy=1611, text="ja, bewusst"),
+                Checkbox(page=4, dx=37, dy=1736, text="teilweise bewusst"),
+                Checkbox(page=4, dx=37, dy=1857, text="nein, eher unbewusst"),
+                Checkbox(page=4, dx=37, dy=1979, text="nein, ueberhaupt nicht"),
+            ],
+        )
+        question16 = Question(
+            num=16,
+            checkboxes=[
+                Checkbox(page=4, dx=37, dy=2513, text="ja, bewusst"),
+                Checkbox(page=4, dx=37, dy=2636, text="teilweise bewusst"),
+                Checkbox(page=4, dx=37, dy=2759, text="nein, eher unbewusst"),
+                Checkbox(page=4, dx=37, dy=2881, text="nein, ueberhaupt nicht"),
+            ],
+        )
+        question17 = Question(
+            num=17,
+            diagramms=[Diagramm(page=5)],
+            tables=[
+                CheckTable(
+                    page=5,
+                    dx=[490, 1030, 1560, 2130, 2670],
+                    dy=2800,
+                    size_x=[480, 480, 480, 480, 480],
+                    size_y=600,
+                    columns=["immer", "oft", "gelegentlich", "einmalig", "-"],
+                    rows=["Kreis", "Dreieck", "Quadrat", "Herz", "Gleich"],
+                ),
+                CheckTable(
+                    page=5,
+                    dx=[490, 1030, 1560, 2130, 2670],
+                    dy=3837,
+                    size_x=[480, 480, 480, 480, 480],
+                    size_y=600,
+                    columns=[
+                        "sehr stark",
+                        "stark",
+                        "mittelmaessig",
+                        "schwach",
+                        "sehr schwach",
+                    ],
+                    rows=["Kreis", "Dreieck", "Quadrat", "Herz", "Gleich"],
+                ),
+                CheckTable(
+                    page=6,
+                    dx=[490, 1030, 1560, 2130, 2670],
+                    dy=546,
+                    size_x=[480, 480, 480, 480, 480],
+                    size_y=600,
+                    columns=[
+                        "sehr sicher",
+                        "sicher",
+                        "mittelmaessig",
+                        "unsicher",
+                        "sehr unsicher",
+                    ],
+                    rows=["Kreis", "Dreieck", "Quadrat", "Herz", "Gleich"],
+                ),
+            ],
+        )
+        question18 = Question(
+            num=18,
+            checkboxes=[
+                Checkbox(page=6, dx=37, dy=1479, text="ueberhaupt nicht erschoepft"),
+                Checkbox(page=6, dx=37, dy=1601, text="eher nicht erschoepft"),
+                Checkbox(page=6, dx=37, dy=1724, text="neutral"),
+                Checkbox(page=6, dx=37, dy=1846, text="eher erschoepft"),
+                Checkbox(page=6, dx=37, dy=1968, text="sehr erschoepft"),
+            ],
+        )
+        question19 = Question(
+            num=19,
+            checkboxes=[
+                Checkbox(page=6, dx=37, dy=2406, text="sehr gut"),
+                Checkbox(page=6, dx=37, dy=2530, text="gut"),
+                Checkbox(page=6, dx=37, dy=2653, text="neutral"),
+                Checkbox(page=6, dx=37, dy=2776, text="eher gering"),
+                Checkbox(page=6, dx=37, dy=2900, text="gering"),
+            ],
+        )
+
+        self.questions = [
+            question1,
+            question2,
+            question3,
+            question4,
+            question5,
+            question6,
+            question7,
+            question8,
+            question9,
+            question10,
+            question11,
+            question12,
+            question13,
+            question14,
+            question15,
+            question16,
+            question17,
+            question18,
+            question19,
+        ]
+
+    def get_num_pages(self) -> int:
+        return 6
+
+    def get_questions(self) -> Sequence[Question]:
+        return self.questions
+
+
+class Rope(Template):
+    def __init__(self) -> None:
+        question1 = Question(
+            num=1,
+            diagramms=[Diagramm(page=1)],
+            tables=[
+                CheckTable(
+                    page=1,
+                    dx=[415, 940, 1430, 1995, 2510],
+                    dy=3307,
+                    size_x=[475, 430, 515, 475, 740],
+                    size_y=600,
+                    columns=["immer", "oft", "gelegentlich", "einmalig", "-"],
+                    rows=["Kreis", "Dreieck", "Quadrat", "Herz", "Gleich"],
+                ),
+                CheckTable(
+                    page=2,
+                    dx=[435, 970, 1505, 2075, 2610],
+                    dy=629,
+                    size_x=[505, 500, 540, 504, 500],
+                    size_y=600,
+                    columns=[
+                        "sehr stark",
+                        "stark",
+                        "mittelmaessig",
+                        "schwach",
+                        "sehr schwach",
+                    ],
+                    rows=["Kreis", "Dreieck", "Quadrat", "Herz", "Gleich"],
+                ),
+                CheckTable(
+                    page=2,
+                    dx=[440, 960, 1515, 2070, 2615],
+                    dy=1704,
+                    size_x=[480, 520, 520, 510, 480],
+                    size_y=600,
+                    columns=[
+                        "sehr sicher",
+                        "sicher",
+                        "mittelmaessig",
+                        "unsicher",
+                        "sehr unsicher",
+                    ],
+                    rows=["Kreis", "Dreieck", "Quadrat", "Herz", "Gleich"],
+                ),
+            ],
+        )
+        self.questions = [question1]
+
+    def get_num_pages(self) -> int:
+        return 2
+
+    def get_questions(self) -> Sequence[Question]:
+        return self.questions
