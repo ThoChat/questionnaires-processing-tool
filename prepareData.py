@@ -31,9 +31,9 @@ import warnings
 from pdf2image import convert_from_path
 
 if platform.system() == "Windows":
-    # We may need to do some additional downloading and setup...
-    # Windows also needs poppler_exe
-    path_to_poppler_exe = Path(r"C:\\.....")
+    # Some additional downloading and setup
+    # Check installation guide for pdf2image: https://pypi.org/project/pdf2image/
+    path_to_poppler_exe = Path(r"C:\\.")
 
 #----- project includes
 from src.survey_templates import GrabExperiment, ExperimentTypes
