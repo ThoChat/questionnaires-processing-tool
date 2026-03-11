@@ -7,19 +7,20 @@ requires-python = ">=3.13"
 dependencies = [
     "opencv-contrib-python>=4.13.0.92",
     "opencv-python>=4.13.0.92",
-    "packaging>=26.0
+    "packaging>=26.0",
     "pdf2image>=1.17.0",
     "pillow>=12.1.1",
-    "PyQt5">=5.15.11
-    "PyQt5-Qt5">=5.15.18
-    "PyQt5_sip">=12.18.0
-    "PyQtDarkTheme-fork">=2.3.6
+    "PyQt5>=5.15.11",
+    "PyQt5-Qt5>=5.15.18",
+    "PyQt5_sip>=12.18.0",
+    "PyQtDarkTheme-fork>=2.3.6",
     "pytesseract>=0.3.13",
     #"torch>=2.10.0",       #only needed for hand-writing detection
     #"torchvision>=0.25.0", #only needed for hand-writing detection
     #"transformers>=5.2.0", #only needed for hand-writing detection
+]
+
 [dependency-groups]
 dev = [
     "ruff>=0.15.4",
-]
 ]
