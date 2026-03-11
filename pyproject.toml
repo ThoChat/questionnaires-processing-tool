@@ -1,23 +1,25 @@
 [project]
 name = "pedestriancrowd"
 version = "0.1.0"
-description = "Script samples for automatic processing of scanned surveys"
+description = "Script samples and UI for automatic processing of scanned surveys"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "opencv-contrib-python>=4.13.0.92",
     "opencv-python>=4.13.0.92",
+    "packaging>=26.0
     "pdf2image>=1.17.0",
     "pillow>=12.1.1",
-    "pyqt5>=5.15.11",
-    "pyqtdarktheme>=2.1.0",
+    "PyQt5">=5.15.11
+    "PyQt5-Qt5">=5.15.18
+    "PyQt5_sip">=12.18.0
+    "PyQtDarkTheme-fork">=2.3.6
     "pytesseract>=0.3.13",
-    "torch>=2.10.0",
-    "torchvision>=0.25.0",
-    "transformers>=5.2.0",
-]
-
+    #"torch>=2.10.0",       #only needed for hand-writing detection
+    #"torchvision>=0.25.0", #only needed for hand-writing detection
+    #"transformers>=5.2.0", #only needed for hand-writing detection
 [dependency-groups]
 dev = [
     "ruff>=0.15.4",
+]
 ]
