@@ -49,7 +49,7 @@ class SurveyWindow(qtWid.QWidget):
         weirdButton.clicked.connect(self.reportWeirdness)
         mainLayout.addWidget(weirdButton)
 
-        splitter = qtWid.QSplitter()
+        self.splitter = qtWid.QSplitter()
 
         # Save shortcut
         saveShortcut = qtWid.QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
@@ -95,10 +95,10 @@ class SurveyWindow(qtWid.QWidget):
 
         self.imageScroll.setWidget(imageContainer)
 
-        splitter.addWidget(self.questionScroll)
-        splitter.addWidget(self.imageScroll)
+        self.splitter.addWidget(self.questionScroll)
+        self.splitter.addWidget(self.imageScroll)
 
-        mainLayout.addWidget(splitter)
+        mainLayout.addWidget(self.splitter)
 
         self.setLayout(mainLayout)
 
@@ -264,6 +264,12 @@ class SurveyWindow(qtWid.QWidget):
         y = qwidget.y()
         bar.setValue(y - self.questionScroll.height() // 2)
 
+# Center the Splitter on open and window resize
+    def showEvent(self, event):
+        super().showEvent(event)
+
+        total = self.splitter.size().width()
+        self.splitter.setSizes([total // 2, total - total // 2])
 
 # ---------------------------
 # Comment Window

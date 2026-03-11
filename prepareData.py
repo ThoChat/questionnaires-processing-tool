@@ -119,7 +119,7 @@ class pdfConverter():
                 if not os.path.isdir(currDir):
                     os.mkdir(currDir)
 
-            pathToFile = os.path.join(self.tempDir, f"page-{(nr+1):03}." + self.imgType) #pdf2image starts with page 1
+            pathToFile = os.path.join(self.tempDir, f"page-{(nr+1)}." + self.imgType) #pdf2image starts with page 1
             if os.path.isfile(pathToFile):
                 pageName = f"page-{(surveyPage+1):03}." + self.imgType
                 os.rename(pathToFile, os.path.join(currDir, pageName))

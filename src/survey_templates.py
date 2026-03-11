@@ -11,7 +11,7 @@ class ExperimentTypes(StrEnum):
 
     @classmethod
     def _missing_(cls, value):
-        value = value.lower()
+        value = str(value).lower()
         for member in cls:
             if member.value == value:
                 return member

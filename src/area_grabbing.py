@@ -115,8 +115,6 @@ def parse_single_data(imgDir, files, template: Template) -> str:
         gray = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
         corners, ids, _ = detector.detectMarkers(gray)
 
-        cv2.aruco.drawDetectedMarkers(img, corners, ids)
-
         pages[page_nr] = Page(page_nr, img, corners, ids)
 
     subjectData = {
@@ -128,13 +126,7 @@ def parse_single_data(imgDir, files, template: Template) -> str:
         for checkbox in question.checkboxes:
             top = int(AnkerPos.Y.value + checkbox.dy)
             left = int(AnkerPos.X.value + checkbox.dx)
-            cv2.rectangle(
-                pages[checkbox.page].img,
-                (left, top),
-                (left + 60, top + 70),
-                color=(255, 201, 201),
-                thickness=2,
-            )
+
             checkbox_img = pages[checkbox.page].img[top : top + 70, left : left + 60]
             grade = non_background_percentage(checkbox_img)
             checkboxData.append(
@@ -146,13 +138,7 @@ def parse_single_data(imgDir, files, template: Template) -> str:
         for textfield in question.texts:
             top = int(AnkerPos.Y.value + textfield.dy)
             left = int(AnkerPos.X.value + textfield.dx)
-            cv2.rectangle(
-                pages[textfield.page].img,
-                (left, top),
-                (left + textfield.size_x, top + textfield.size_y),
-                color=(255, 201, 201),
-                thickness=2,
-            )
+
             filePath = f"{imgDir}/question_{question.num}_freeText.jpg"
             cv2.imwrite(
                 filePath,
@@ -173,13 +159,6 @@ def parse_single_data(imgDir, files, template: Template) -> str:
                         (top + i * step_y + 13) : (top + (i + 1) * step_y - 13),
                         (left) : (left + size_x),
                     ]
-                    cv2.rectangle(
-                        pages[table.page].img,
-                        (left, top + i * step_y + 13),
-                        (left + size_x, top + (i + 1) * step_y - 13),
-                        color=(255, 201, 201),
-                        thickness=2,
-                    )
                     grade = non_background_percentage(cell_img)
                     print(f"{row}-{column}-{grade}")
                     # TODO: Parse table data to json file
