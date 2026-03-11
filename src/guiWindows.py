@@ -16,6 +16,7 @@ __author__ = "Alexandra Mielke"
 # Survey Checking Window
 # ---------------------------
 
+
 class SurveyWindow(qtWid.QWidget):
     # add signal to send out once survey is closed
     surveyClosed = QtCore.pyqtSignal(str, str)
@@ -130,7 +131,7 @@ class SurveyWindow(qtWid.QWidget):
         self.commentWindow.commentClosed.connect(self.updateComment)
         self.commentWindow.show()
 
-    def updateComment(self, comment:str):
+    def updateComment(self, comment: str):
         self.data["comment"] = comment
         self.status = "Needs checking"
         self.go_back()
@@ -147,7 +148,7 @@ class SurveyWindow(qtWid.QWidget):
         for p in self.pageWidgets:
             p.set_highlight(None)
 
-        page_widget = self.pageWidgets[page-1]
+        page_widget = self.pageWidgets[page - 1]
 
         if hasattr(element, "size_x"):
             w = element.size_x
@@ -160,7 +161,7 @@ class SurveyWindow(qtWid.QWidget):
             int((element.dx + AnkerPos.X.value) * page_widget.scale),
             int((element.dy + AnkerPos.Y.value) * page_widget.scale),
             int(w * page_widget.scale),
-            int(h * page_widget.scale)
+            int(h * page_widget.scale),
         )
         page_widget.set_highlight(rect)
         self.center_on(page_widget, rect)
@@ -179,7 +180,7 @@ class SurveyWindow(qtWid.QWidget):
                 heights[p] += qw.sizeHint().height()
 
         return heights
-    
+
     def init_images(self):
         scales = self.compute_page_scales()
         nr_pages = self.template.get_num_pages()
@@ -195,7 +196,7 @@ class SurveyWindow(qtWid.QWidget):
                 int(pix.width() * scale),
                 int(pix.height() * scale),
                 QtCore.Qt.KeepAspectRatio,
-                QtCore.Qt.SmoothTransformation
+                QtCore.Qt.SmoothTransformation,
             )
 
             page = ImagePage(pix, i)
@@ -203,7 +204,7 @@ class SurveyWindow(qtWid.QWidget):
 
             self.pageWidgets.append(page)
             self.imageScroll.widget().layout().addWidget(page)
-    
+
     def compute_page_scales(self):
         page_template_heights = {}
         page_gui_heights = {}
@@ -223,7 +224,7 @@ class SurveyWindow(qtWid.QWidget):
         for p in page_template_heights:
             scales[p] = page_gui_heights[p] / page_template_heights[p]
         return scales
-    
+
     def center_on(self, page_widget, rect):
         """Move image so it centers on page_widget"""
         scroll = self.imageScroll.verticalScrollBar()
@@ -247,7 +248,7 @@ class SurveyWindow(qtWid.QWidget):
 
         for i, q in enumerate(self.questions):
             if q.isAncestorOf(focus):
-                new_i = max(0, min(len(self.questions)-1, i+direction))
+                new_i = max(0, min(len(self.questions) - 1, i + direction))
                 next_q = self.questions[new_i]
                 self.scroll_to_question(next_q)
 
@@ -261,15 +262,17 @@ class SurveyWindow(qtWid.QWidget):
         """Move questionScroll so it center on the current question"""
         bar = self.questionScroll.verticalScrollBar()
         y = qwidget.y()
-        bar.setValue(y - self.questionScroll.height()//2)
+        bar.setValue(y - self.questionScroll.height() // 2)
+
 
 # ---------------------------
 # Comment Window
 # ---------------------------
 
+
 # Basic comment input window that returns comment once it's closed
 class CommentWindow(qtWid.QWidget):
-    #signal to be send once comment is closed
+    # signal to be send once comment is closed
     commentClosed = QtCore.pyqtSignal(str)
 
     def __init__(self, lastComment):
@@ -291,7 +294,7 @@ class CommentWindow(qtWid.QWidget):
         mainLayout.addWidget(self.textBox)
 
         self.setLayout(mainLayout)
-        self.showMaximized()        
+        self.showMaximized()
 
     def done(self):
         self.commentClosed.emit(self.comment)
@@ -300,13 +303,14 @@ class CommentWindow(qtWid.QWidget):
     def changeComment(self):
         self.comment = self.textBox.toPlainText()
 
+
 # ---------------------------
 # Main Window
 # ---------------------------
 
-class MainWindow(qtWid.QWidget):
 
-    def __init__(self, experimentDir:str):
+class MainWindow(qtWid.QWidget):
+    def __init__(self, experimentDir: str):
         super().__init__()
 
         self.metadataPath = os.path.join(experimentDir, "metadata.json")
@@ -332,25 +336,27 @@ class MainWindow(qtWid.QWidget):
         layout.addWidget(scroll)
         self.setLayout(layout)
 
-    def sortSurveys(self):       
+    def sortSurveys(self):
         # Sort entries
         order = {"Open": 0, "Needs checking": 1, "Done": 2}
-        return sorted(self.metadata["surveyResponses"].items(), 
-                      key=lambda x: order[x[1]["status"]])
+        return sorted(
+            self.metadata["surveyResponses"].items(),
+            key=lambda x: order[x[1]["status"]],
+        )
 
     def open_survey(self, name):
-        self.surveyWindow = SurveyWindow(name, self.metadata["surveyResponses"][name]["dir"], 
-                                         GrabExperiment.initType(self.metadata["Experiment"]["Type"]), 
-                                         self.metadata["surveyResponses"][name]["status"])
+        self.surveyWindow = SurveyWindow(
+            name,
+            self.metadata["surveyResponses"][name]["dir"],
+            GrabExperiment.initType(self.metadata["Experiment"]["Type"]),
+            self.metadata["surveyResponses"][name]["status"],
+        )
         self.surveyWindow.surveyClosed.connect(self.update_survey_status)
         self.surveyWindow.show()
 
     def update_survey_status(self, name, new_status):
         self.metadata["surveyResponses"][name]["status"] = new_status
-        saveData(
-            os.path.join(self.experimentDir, "metadata.json"),
-            self.metadata
-        )
+        saveData(os.path.join(self.experimentDir, "metadata.json"), self.metadata)
         self.rebuild_list()
 
     def rebuild_list(self):
@@ -362,12 +368,13 @@ class MainWindow(qtWid.QWidget):
                 w.deleteLater()
 
         sorted_items = self.sortSurveys()
-        for name, data in sorted_items[:self.metadata["participants"]]:
+        for name, data in sorted_items[: self.metadata["participants"]]:
             w = SurveyEntryWidget(name, data["status"])
             w.clicked.connect(self.open_survey)
             self.vbox.addWidget(w)
 
         self.vbox.addStretch()
+
 
 def main(experimentDir):
     app = qtWid.QApplication(sys.argv)

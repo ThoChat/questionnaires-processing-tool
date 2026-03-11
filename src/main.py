@@ -34,7 +34,7 @@ def convert_pages(path_in: str, path_out: str):
 
     Args:
         path_in (str): Path to the PDF file to convert.
-        path_out (str): Results will be saved to this directory. Will not be created.   
+        path_out (str): Results will be saved to this directory. Will not be created.
     """
     pdf_file = Path(path_in)
     if platform.system() == "Windows":
@@ -47,14 +47,14 @@ def convert_pages(path_in: str, path_out: str):
         page.save(filename, "JPEG")
 
 
-def ocr(path_in: str, lang:str="deu"):
+def ocr(path_in: str, lang: str = "deu"):
     """Perform ocr for all files matching the pattern page_NNN.jpg in given directory.
 
     The results will be saved as page_NNN.txt in the same directory.
 
     Args:
         path_in (str): Directory with the images to read
-        lang (str): language code of the text language 
+        lang (str): language code of the text language
                     https://tesseract-ocr.github.io/tessdoc/Data-Files-in-different-versions.html
     """
     for fp in glob.glob(path_in + "/page_[0-9][0-9][0-9].jpg"):

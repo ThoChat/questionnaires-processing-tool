@@ -15,6 +15,7 @@ model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-handwrit
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model.to(device)
 
+
 def recognize_handwriting(image_path: str) -> str:
     image = Image.open(image_path).convert("RGB")
     pixel_values = processor(images=image, return_tensors="pt").pixel_values.to(device)

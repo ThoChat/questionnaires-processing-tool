@@ -1,5 +1,4 @@
- 
-import Image
+from PIL import Image
 import os
 import platform
 import pytesseract
@@ -8,13 +7,12 @@ __license__ = "MIT"
 __author__ = "Marvin Lorber"
 
 if platform.system() == "Windows":
-    # We may need to do some additional downloading and setup...
-    # Windows needs a PyTesseract Download
-    # https://github.com/UB-Mannheim/tesseract/wiki/
-
+    # Some additional downloading and setup
+    # See installation Guide for tesseract: https://pypi.org/project/pytesseract/#installation
     pytesseract.pytesseract.tesseract_cmd = (
         r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
     )
+
 
 def ocr(filepath):
     if os.path.isfile(filepath):
