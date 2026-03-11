@@ -1,9 +1,12 @@
 import cv2
+import json
 import numpy as np
-import survey_templates
+from src.survey_templates import Diagramm, Template, AnkerPos
 import glob
 import os
 
+__license__ = "MIT"
+__author__ = ["Marvin Lorber", "Alexandra Mielke"]
 
 def deskew(img, corners, ids):
     ids = ids.flatten()
@@ -27,13 +30,13 @@ def deskew(img, corners, ids):
 
     # Destination points (fixed positions)
     dst_pts = np.array([
-        [645,   375],  # top-left
+        [AnkerPos.X.value, AnkerPos.Y.value],  # top-left
         [3725,  375],  # top-right
         [3725, 5530],  # bottom-right
         [645,  5530],  # bottom-left
     ], dtype=np.float32)
 
-    # 3×3 homography
+    # Find transformation matrix, so source points are morphed to dst_pts (3×3 homography)
     H, _ = cv2.findHomography(src_pts, dst_pts)
 
     # Warp the whole image
@@ -67,7 +70,7 @@ class Page:
         self.corners = corners
         self.ids = ids
 
-def extract_diagramm(diagramm: survey_templates.Diagramm, page: Page):
+def extract_diagramm(diagramm: Diagramm, page: Page):
     ids = page.ids.flatten()
     corners = dict(zip(ids, page.corners))
     top_left_corner = corners[diagramm.corner_ids[0]]
@@ -76,7 +79,116 @@ def extract_diagramm(diagramm: survey_templates.Diagramm, page: Page):
     bottom_right_point = bottom_right_corner[0][2]
     return page.img[int(top_left_point[1]):int(bottom_right_point[1]), int(top_left_point[0]):int(bottom_right_point[0])]
 
-def mark_target_areas(path_in:str, template:survey_templates.Template):
+def parse_single_data(imgDir, files, template: Template) -> str:
+    threshold = 20 #percentage that has to be black for answer to be accepted
+    pages = {}
+    for fp in files:
+        page_nr = int(fp[-5])
+        img = cv2.imread(os.path.join(imgDir, fp))
+        # Convert the image to grayscale
+        gray = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
+        aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+        parameters = cv2.aruco.DetectorParameters()
+
+        # Create the ArUco detector
+        detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
+        # Detect the markers
+        corners, ids, _ = detector.detectMarkers(gray)
+
+        img = deskew(img, corners, ids)
+
+        #redetect markers after transformation
+        gray = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
+        corners, ids, _ = detector.detectMarkers(gray)
+
+        cv2.aruco.drawDetectedMarkers(img, corners, ids)
+
+        pages[page_nr] = Page(page_nr, img, corners, ids)
+
+    subjectData = {
+        "participantNr": 0,
+    }
+    
+    
+    for question in template.get_questions():
+        checkboxData = []
+        for checkbox in question.checkboxes:
+            top = int(AnkerPos.Y.value + checkbox.dy)
+            left = int(AnkerPos.X.value + checkbox.dx)
+            cv2.rectangle(pages[checkbox.page].img, (left,top), (left+60,top+70), color=(255,201,201), thickness=2)
+            checkbox_img = pages[checkbox.page].img[top:top+70, left:left+60]
+            grade = non_background_percentage(checkbox_img)
+            checkboxData.append({
+                "text": checkbox.text,
+                "answer": True if grade > threshold else False
+            })
+            print(f"Question {question.num}-{checkbox.text}:{grade}")
+        
+        textfieldData = []
+        for textfield in question.texts:
+            top = int(AnkerPos.Y.value + textfield.dy)
+            left = int(AnkerPos.X.value + textfield.dx)
+            cv2.rectangle(
+                pages[textfield.page].img, 
+                (left,top),
+                (left+textfield.size_x,top+textfield.size_y),
+                color=(255,201,201),
+                thickness=2)
+            filePath = f"{imgDir}/question_{question.num}_freeText.jpg"
+            cv2.imwrite(filePath, pages[textfield.page].img[top:top+textfield.size_y,left:left+textfield.size_x,:])
+            textfieldData.append({
+                "text": "",
+                "file": filePath
+            })
+
+        tableData = []
+        for table in question.tables:
+            top = int(AnkerPos.Y.value + table.dy)
+            step_y = (int)(table.size_y / np.size(table.rows))
+            for i, row in enumerate(table.rows):
+                for dx, size_x, column in zip(table.dx, table.size_x, table.columns):
+                    left = int(AnkerPos.X.value + dx)
+                    cell_img = pages[table.page].img[(top + i*step_y + 13):(top + (i+1)*step_y - 13), (left):(left + size_x)]
+                    cv2.rectangle(
+                        pages[table.page].img, 
+                        (left, top + i*step_y + 13),
+                        (left + size_x, top + (i+1)*step_y - 13),
+                        color=(255,201,201),
+                        thickness=2)
+                    grade = non_background_percentage(cell_img)
+                    print(f"{row}-{column}-{grade}")
+                    # TODO: Parse table data to json file
+                    
+        pathToDiagram = ""
+        for diagramm in question.diagramms:
+            img = extract_diagramm(diagramm, pages[diagramm.page])
+            pathToDiagram = os.path.join(imgDir, f"question_{question.num}_diagramm.jpg")
+            cv2.imwrite(pathToDiagram, img)
+
+        questionData = {}
+        questionData["question"] = question.questionText
+        if len(checkboxData) > 0:
+            questionData["checkboxes"] = checkboxData
+        if len(textfieldData) > 0:
+            questionData["textFields"] = textfieldData
+        if len(tableData) > 0:
+            questionData["tables"] = tableData
+        if pathToDiagram != "":
+            questionData["diagram"] = {
+                "file": pathToDiagram
+            }
+        subjectData[str(question.num)] = questionData
+
+    for key, value in pages.items():
+        imgFileName = f"page-00{key}.jpg"
+        cv2.imwrite(os.path.join(imgDir, imgFileName), value.img) #this overwrites the old image
+
+    dataFileName = "surveyData.json"
+    with open(os.path.join(imgDir, dataFileName), "w") as f:
+        json.dump(subjectData, f, indent=4)
+    return dataFileName
+
+def mark_target_areas(path_in:str, template: Template):
     pages = {}
     for fp in glob.glob(path_in + "/page_[0-9][0-9][0-9].jpg"):
         if os.path.isfile(fp):
@@ -102,31 +214,31 @@ def mark_target_areas(path_in:str, template:survey_templates.Template):
 
             pages[page_nr] = Page(page_nr, img, corners, ids)
 
-    aruca_x = 645
-    aruca_y = 375
+    AnkerPos.X.value = 645
+    AnkerPos.Y.value = 375
     for question in template.get_questions():
         for checkbox in question.checkboxes:
-            top = int(aruca_y + checkbox.dy)
-            left = int(aruca_x + checkbox.dx)
+            top = int(AnkerPos.Y.value + checkbox.dy)
+            left = int(AnkerPos.X.value + checkbox.dx)
             cv2.rectangle(pages[checkbox.page].img, (left,top), (left+60,top+70), color=(255,201,201), thickness=2)
             checkbox_img = pages[checkbox.page].img[top:top+70, left:left+60]
             grade = non_background_percentage(checkbox_img)
             print(f"Question {question.num}-{checkbox.text}:{grade}")
         for textfield in question.texts:
-            top = int(aruca_y + textfield.dy)
-            left = int(aruca_x + textfield.dx)
+            top = int(AnkerPos.Y.value + textfield.dy)
+            left = int(AnkerPos.X.value + textfield.dx)
             cv2.rectangle(
                 pages[textfield.page].img, 
                 (left,top),
                 (left+textfield.size_x,top+textfield.size_y),
-                color=(255,0,0),
+                color=(255,201,201),
                 thickness=2)
         for table in question.tables:
-            top = int(aruca_y + table.dy)
+            top = int(AnkerPos.Y.value + table.dy)
             step_y = (int)(table.size_y / np.size(table.rows))
             for i, row in enumerate(table.rows):
                 for dx, size_x, column in zip(table.dx, table.size_x, table.columns):
-                    left = int(aruca_x + dx)
+                    left = int(AnkerPos.X.value + dx)
                     cell_img = pages[table.page].img[(top + i*step_y + 13):(top + (i+1)*step_y - 13), (left):(left + size_x)]
                     cv2.rectangle(
                         pages[table.page].img, 
@@ -143,10 +255,3 @@ def mark_target_areas(path_in:str, template:survey_templates.Template):
 
     for key, value in pages.items():
         cv2.imwrite(f"{path_in}/page_00{key}_detected.jpg", value.img)
-
-def main():
-    mark_target_areas("/home/marvin/Dokumente/Temp/pedestriancrowds/Bottleneck_Dienstag_1_10", template=survey_templates.Bottleneck())
-    #mark_target_areas("/home/marvin/Dokumente/Temp/pedestriancrowds/Berührung_Seil_Samstag_01", template=survey_templates.Rope())
-
-if __name__ == "__main__":
-    main()
