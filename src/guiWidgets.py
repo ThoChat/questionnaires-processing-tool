@@ -99,6 +99,7 @@ class BoundTextEdit(qtWid.QTextEdit):
         self.setText(json_ref["text"])
 
         self.textChanged.connect(self.write_json)
+        self.setTabChangesFocus(True)
 
     def write_json(self):
         self.json_ref["text"] = self.toPlainText()
@@ -164,7 +165,7 @@ class QuestionWidget(qtWid.QFrame):
         ):
             # TODO proper table handling
             w = qtWid.QTextEdit("Table would be here. I'm not bound yet though")
-            w.setPlainText("")
+            #w.setPlainText("")
             w.setFixedHeight(70)
 
             layout.addWidget(w)
