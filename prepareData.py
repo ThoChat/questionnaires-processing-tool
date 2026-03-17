@@ -84,12 +84,12 @@ class pdfConverter():
         print(f"Converting {path_to_pdf} to images ... ")
         pdf_file = Path(path_to_pdf)
         if platform.system() == "Windows":
-            convert_from_path(pdf_file, fmt=self.imgType, dpi=500, 
+            convert_from_path(pdf_file, fmt=self.imgType, dpi=area_grabbing.dpi, 
                                           output_folder=self.tempDir, paths_only=True,
                                           output_file=self._page_name_generator(),
                                           poppler_path=path_to_poppler_exe)
         else:
-            convert_from_path(pdf_file, fmt=self.imgType, dpi=500, 
+            convert_from_path(pdf_file, fmt=self.imgType, dpi=area_grabbing.dpi, 
                                           output_file=self._page_name_generator(),
                                           output_folder=self.tempDir, paths_only=True) # Read in the PDF file at 500 DPI
 
@@ -119,7 +119,7 @@ class pdfConverter():
                 if not os.path.isdir(currDir):
                     os.mkdir(currDir)
 
-            pathToFile = os.path.join(self.tempDir, f"page-{(nr+1)}." + self.imgType) #pdf2image starts with page 1
+            pathToFile = os.path.join(self.tempDir, f"page-{(nr+1):03}." + self.imgType) #pdf2image starts with page 1
             if os.path.isfile(pathToFile):
                 pageName = f"page-{(surveyPage+1):03}." + self.imgType
                 os.rename(pathToFile, os.path.join(currDir, pageName))
@@ -148,6 +148,18 @@ class pdfConverter():
         for file in os.listdir(self.tempDir):
             os.remove(file)
         os.rmdir(self.tempDir)
+
+    def prepareFigureImg(self):
+        imgPath = ""
+        for resp in self.metadata["surveyResponses"]:
+            dir = self.metadata["surveyResponses"][resp]["dir"]
+            for img in os.listdir(dir):
+                if img.endswith("diagramm.jpg"):
+                    imgPath = os.path.join(dir, img)
+                    break
+            if imgPath == "":
+                break
+        area_grabbing.create_diagram_masks(imgPath)
 
 def main():
     """parser = argparse.ArgumentParser(description="Convert PDF to images with optional Optical Character Recognition")
@@ -186,6 +198,7 @@ def main():
     converter = pdfConverter(mainDir=expDir, metadataFile=os.path.join(expDir, metadataFile))
     converter.convert_pages(pdfFile)
     converter.sort_pages()
+    converter.prepareFigureImg()
 
 if __name__ == "__main__":
     main()

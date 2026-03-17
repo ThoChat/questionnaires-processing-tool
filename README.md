@@ -65,7 +65,7 @@ Alternatively you could go to the specific survey's data.json (surveyData.json) 
   - needs to be added into json when preparing data
   - Needs to be added in GUI -> [guiWidgets.py](/src/guiWidgets.py)
 - Weird jumping in left side of survey Window when clicking on questions
-- Diagram handling in GUI
+- Diagram scales are off, if diagram smaller than 1000
 
 ## Ideas / Questions
 

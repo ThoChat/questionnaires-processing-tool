@@ -11,3 +11,5 @@ wheels/
 
 #Project
 data/
+src/outline_figures.pickle
+src/areaMapping.png
