@@ -1,26 +1,44 @@
 import cv2
 import json
 import numpy as np
-from src.survey_templates import Diagramm, Template, AnkerPos
+from src.survey_templates import Diagramm, Template, AnkerPos, DiagramAreas
 import glob
 import os
+import pickle
 
 __license__ = "MIT"
 __author__ = ["Marvin Lorber", "Alexandra Mielke"]
 
+dpi = 500
 
-def deskew(img, corners, ids):
+class Page:
+    def __init__(self, number, img, corners, ids) -> None:
+        self.number = number
+        self.img = img
+        self.corners = corners
+        self.ids = ids
+
+def getArucoCenters(corners, ids):
     ids = ids.flatten()
     marker_centers = {}
-
     for marker_corners, marker_id in zip(corners, ids):
         pts = marker_corners[0]  # shape (4,2)
         cx = np.mean(pts[:, 0])
         cy = np.mean(pts[:, 1])
         marker_centers[marker_id] = (cx, cy)
+    return marker_centers
 
+def warpImage(img, src_pts, dst_pts):
+    # Find transformation matrix, so source points are morphed to dst_pts (3×3 homography)
+    H, _ = cv2.findHomography(src_pts, dst_pts)
+
+    # Warp the whole image
     H_out, W_out, _ = img.shape
+    return cv2.warpPerspective(img, H, (W_out, H_out), flags=cv2.INTER_NEAREST)
 
+def deskew(img, corners, ids):
+    marker_centers = getArucoCenters(corners, ids)
+    
     # Source points (from the current image, in correct corner order)
     src_pts = np.array(
         [
@@ -43,13 +61,7 @@ def deskew(img, corners, ids):
         dtype=np.float32,
     )
 
-    # Find transformation matrix, so source points are morphed to dst_pts (3×3 homography)
-    H, _ = cv2.findHomography(src_pts, dst_pts)
-
-    # Warp the whole image
-    warped = cv2.warpPerspective(img, H, (W_out, H_out))
-    return warped
-
+    return warpImage(img, src_pts, dst_pts)
 
 def non_background_percentage(img) -> float:
     h, w = img.shape[:2]
@@ -71,14 +83,14 @@ def non_background_percentage(img) -> float:
 
     return color_percentage
 
-
-class Page:
-    def __init__(self, number, img, corners, ids) -> None:
-        self.number = number
-        self.img = img
-        self.corners = corners
-        self.ids = ids
-
+# https://www.30secondsofcode.org/python/s/hex-to-rgb/
+# 30secondsofcode 2024
+# CC-BY 4.0
+def rgb_to_hex(color):
+  b = color[0]
+  g = color[1]
+  r = color[2]
+  return ('{:02X}' * 3).format(r, g, b)
 
 def extract_diagramm(diagramm: Diagramm, page: Page):
     ids = page.ids.flatten()
@@ -92,6 +104,88 @@ def extract_diagramm(diagramm: Diagramm, page: Page):
         int(top_left_point[0]) : int(bottom_right_point[0]),
     ]
 
+def find_diagram_edges(img):
+    gray = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+    parameters = cv2.aruco.DetectorParameters()
+
+    # Create the ArUco detector
+    detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
+    # Detect the markers
+    corners, ids, _ = detector.detectMarkers(gray)
+    marker_centers = getArucoCenters(corners, ids)
+
+    img_pts = np.array(
+        [
+            marker_centers[12],  # top-left
+            marker_centers[11],  # top-right
+            marker_centers[13],  # bottom-right
+            marker_centers[14],  # bottom-left
+        ],
+        dtype=np.float32,
+    )
+    return img_pts
+
+def create_diagram_masks(path_to_example_diagram):
+    imgTemp = cv2.imread("src/ouline_figures_with_label_patches.png")
+    #src_pts = find_diagram_edges(imgTemp) #not possible, white margin missing
+    src_pts = np.array(
+        [
+            [162, 162],  # top-left
+            [3267, 162],  # top-right
+            [3267, 1754],  # bottom-right
+            [162, 1745],  # bottom-left
+        ],
+        dtype=np.float32,
+    )
+    
+
+    exampleImg = cv2.imread(path_to_example_diagram)
+    height, width, depth = exampleImg.shape
+    #dst_pts = find_diagram_edges(exampleImg) #not possible, white margin missing
+    dst_pts = np.array(
+        [
+            [155, 155],  # top-left
+            [3164, 165],  # top-right
+            [3165, 1698],  # bottom-right
+            [155, 1691],  # bottom-left
+        ],
+        dtype=np.float32,
+    )
+
+    #scale to same size as scanned image
+    scaledImg = warpImage(imgTemp, src_pts, dst_pts)
+    scaledImg = scaledImg[0:height, 0:width, :]
+    if depth != 3:
+        raise RuntimeError(f"Something wrong with the scaled image. Does only have {depth} channels. Expecting 3.")
+    
+    tempDiagram = Diagramm(page=0)
+    areaDict = {}
+    areaValues = np.zeros((height, width))
+
+    for key in tempDiagram.imgAreas:
+        area = tempDiagram.imgAreas[key]
+        areaDict[area.name] = []
+
+    #loop through pixel in image (probably very unefficient, but easy to understand)
+    x_index = np.array(range(width))
+    y_index = np.array(range(height))
+    for x in x_index:
+        for y in y_index:
+            color = scaledImg[y,x,:]
+            colorHex = '#' + rgb_to_hex(color)
+            if colorHex in tempDiagram.imgAreas:
+                area = tempDiagram.imgAreas[colorHex]
+                areaDict[area.name].append([int(x),int(y)])
+            else:
+                area = DiagramAreas.SOMETHING_ELSE
+            areaValues[y,x] = area.value
+
+    with open("src/outline_figures.pickle", "wb") as f:
+        pickle.dump(areaDict, f)
+
+    img = areaValues.astype('uint8')
+    cv2.imwrite("src/areaMapping.png", img)
 
 def parse_single_data(imgDir, files, template: Template) -> str:
     threshold = 20  # percentage that has to be black for answer to be accepted

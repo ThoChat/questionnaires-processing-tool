@@ -1,11 +1,15 @@
 from PyQt5 import QtCore, QtGui
 from PyQt5 import QtWidgets as qtWid
+from PIL import Image
+import numpy as np
+import pickle
+
+from src.survey_templates import DiagramAreas
 
 __license__ = "MIT"
 __author__ = ["Alexandra Mielke", "Marvin Lorber"]
 
 # -------- Helper --------
-
 
 def status_color(status):
     if status == "Done":
@@ -14,6 +18,19 @@ def status_color(status):
         return "gold"
     return "grey"
 
+def imgIcon_color(id:int):
+    if id == 0:
+        return QtGui.QColor(43, 29, 90, 120)
+    elif id == 1:
+        return QtGui.QColor(162, 150, 202, 120)
+    elif id == 2:
+        return QtGui.QColor(76, 28, 70, 120)
+    elif id == 3:
+        return QtGui.QColor(142, 204, 185, 120)
+    elif id == 4:
+        return QtGui.QColor(85,156,158,120)
+    else:
+        return QtGui.QColor(100,100,100,120) #gray
 
 # ---------------------------
 # JSON binding
@@ -53,7 +70,6 @@ class ImagePage(qtWid.QLabel):
             pen.setWidth(4)
             painter.setPen(pen)
             painter.drawRect(self.highlight_rect)
-
 
 # ---------------------------
 # Focus Widgets
@@ -108,6 +124,140 @@ class BoundTextEdit(qtWid.QTextEdit):
         self.focused.emit(self.template)
         super().focusInEvent(e)
 
+class ClickableImageLabel(qtWid.QLabel):
+    clicked = QtCore.pyqtSignal(int, int)
+
+    def mousePressEvent(self, event):
+        if self.pixmap() is None:
+            return
+
+        pixmap = self.pixmap()
+        label_size = self.size()
+        pixmap_size = pixmap.size()
+
+        # scale-aware coordinate mapping
+        x_ratio = pixmap_size.width() / label_size.width()
+        y_ratio = pixmap_size.height() / label_size.height()
+
+        px = int(event.x() * x_ratio)
+        py = int(event.y() * y_ratio)
+
+        self.clicked.emit(px, py)
+
+class BoundDiagramWidget(qtWid.QWidget):
+    focused = QtCore.pyqtSignal(object)
+
+    def __init__(self, template, json_ref):
+        super().__init__()
+
+        self.template = template
+        self.json_ref = json_ref
+
+        areaMapping = Image.open("src/areaMapping.png")
+        self.areaMapping = np.array(areaMapping)
+        with open("src/outline_figures.pickle", 'rb') as f:
+            self.areaDict = pickle.load(f)
+        self.value_to_area = {member.value: member for member in DiagramAreas}
+
+        layout = qtWid.QVBoxLayout(self)
+
+        # --- Radio Buttons ---
+        self.button_group = qtWid.QButtonGroup(self)
+        self.button_group.setExclusive(True)
+
+        radio_layout = qtWid.QHBoxLayout()
+
+        self.buttons = {}
+        # TODO: Access directly from template
+        labels = ["Kreis", "Dreieck", "Quadrat", "Herz", "Gleich"]
+
+        for i, text in enumerate(labels):
+            rb = qtWid.QRadioButton(text)
+            self.button_group.addButton(rb, i)
+            radio_layout.addWidget(rb)
+            self.buttons[text] = rb
+
+        layout.addLayout(radio_layout)
+        
+        self.button_group.buttonClicked.connect(self.set_curr_symbol)
+
+        # --- Image Stack ---
+        self.stack = qtWid.QStackedLayout()
+        container = qtWid.QWidget()
+        container.setLayout(self.stack)
+
+        # top image (semi-transparent)
+        self.image_label = ClickableImageLabel()
+
+        pixmap = QtGui.QPixmap(json_ref["file"])
+
+        # scale to a fixed size (e.g. current label/container size)
+        size_x = 1000
+        target_size = QtCore.QSize(size_x, int((template.dy/template.dx) * size_x))
+
+        scaled = pixmap.scaled(
+            target_size,
+            QtCore.Qt.KeepAspectRatio,
+            QtCore.Qt.SmoothTransformation
+        )
+
+        self.scaled_pixmap = scaled
+        self.image_label.setPixmap(scaled)
+
+        # store scale factors
+        self.scale_x = pixmap.width() / scaled.width()
+        self.scale_y = pixmap.height() / scaled.height()
+
+        layout.addWidget(self.image_label)
+
+        # click handling
+        self.image_label.clicked.connect(self.handle_click)
+
+    def set_curr_symbol(self, button):
+        self.selected_id = self.button_group.checkedId()
+
+    def handle_click(self, px, py):
+        selected_id = self.button_group.checkedId()
+        if selected_id == -1:
+            return
+
+        labels = ["Kreis", "Dreieck", "Quadrat", "Herz", "Gleich"]
+        selected_shape = labels[selected_id]
+
+        # store selection
+        #self.json_ref["selectedShape"] = selected_shape
+        #self.json_ref["lastClick"] = {"x": px, "y": py}
+        imgVal = self.areaMapping[int(py*self.scale_y), int(px*self.scale_x)]
+
+        areaType = self.value_to_area.get(imgVal)
+        if not areaType or areaType == DiagramAreas.SOMETHING_ELSE:
+            return
+            
+
+        imgPos = np.divide(np.array(self.areaDict[areaType.name]), [self.scale_x, self.scale_y])
+        coords = imgPos.astype(np.uint16)
+
+        image = self.scaled_pixmap.toImage()
+        ptr = image.bits()
+        ptr.setsize(image.byteCount())
+
+        arr = np.frombuffer(ptr, np.uint8).reshape(
+            (image.height(), image.width(), 4)
+        )
+
+        color = imgIcon_color(selected_id)
+        arr[coords[:, 1], coords[:, 0]] = [
+            color.red(), color.green(), color.blue(), color.alpha()
+        ]
+
+        self.scaled_pixmap = QtGui.QPixmap.fromImage(image)
+        self.image_label.setPixmap(self.scaled_pixmap)
+        #TODO store in self.json_ref
+
+    def focusInEvent(self, e):
+        self.focused.emit(self.template)
+        super().focusInEvent(e)
+
 
 # ---------------------------
 # Question Widget
@@ -125,7 +275,6 @@ class QuestionWidget(qtWid.QFrame):
         )
 
         self.qnum = question_template.num
-        self.question = question_template
 
         layout = qtWid.QVBoxLayout()
 
@@ -159,8 +308,16 @@ class QuestionWidget(qtWid.QFrame):
 
         self.setLayout(layout)
 
+        # diagram
+        if "diagram" in question_json:
+            w = BoundDiagramWidget(question_template.diagramms[0], question_json["diagram"])
+            w.focused.connect(self.elementFocused)
+            layout.addWidget(w)
+            elements.append(question_template.diagramms[0])
+            isTablePage = False
+
         # tables
-        for txt_template, txt_json in zip(
+        for table_template, table_json in zip(
             question_template.diagramms, question_json.get("diagram", [])
         ):
             # TODO proper table handling
@@ -170,8 +327,9 @@ class QuestionWidget(qtWid.QFrame):
 
             layout.addWidget(w)
 
-            elements.append(txt_template)
+            elements.append(table_template)
             isTablePage = True
+
 
         # ---- compute template bounds ----
         if len(elements) > 0:

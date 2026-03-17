@@ -17,6 +17,30 @@ class ExperimentTypes(StrEnum):
                 return member
         return None
 
+class DiagramAreas(Enum):
+    HEAD = 0
+    NECK = 1
+    BREAST = 2
+    UPPER_BACK = 3
+    LOWER_BACK = 4
+    BUTTOCKS = 5
+    CROTCH = 6
+    STOMACH = 7
+    LEFT_SHOULDER = 8
+    LEFT_UPPER_ARM = 9
+    LEFT_LOWER_ARM = 10
+    LEFT_HAND = 11
+    LEFT_THIGH = 12
+    LEFT_CALF = 13
+    LEFT_FOOT = 14
+    RIGHT_SHOULDER = 15
+    RIGHT_UPPER_ARM = 16
+    RIGHT_LOWER_ARM = 17
+    RIGHT_HAND = 18
+    RIGHT_THIGH = 19
+    RIGHT_CALF = 20
+    RIGHT_FOOT = 21
+    SOMETHING_ELSE = 99
 
 # pixel position of mid of top left AruCo tag
 class AnkerPos(Enum):
@@ -65,10 +89,35 @@ class CheckTable:
 
 
 class Diagramm:
-    def __init__(self, page: int, corner_ids: Sequence[int] = [12, 11, 13, 14]):
+    def __init__(self, page: int, dx:int = 3317, dy:int = 1850, corner_ids: Sequence[int] = [12, 11, 13, 14]):
         self.page = page
         self.corner_ids = corner_ids
-
+        self.dx = dx
+        self.dy = dy
+        self.imgAreas = { # We map colors to body areas, as we later want to get body area back out when feeding in color
+            "#E13F48": DiagramAreas.HEAD,
+            "#4CBCC3": DiagramAreas.NECK,
+            "#7A7A7A": DiagramAreas.BREAST,
+            "#000000": DiagramAreas.UPPER_BACK,
+            "#65BA55": DiagramAreas.LOWER_BACK,
+            "#FE9C11": DiagramAreas.BUTTOCKS, 
+            "#4C6FC3": DiagramAreas.CROTCH,
+            "#34DB91": DiagramAreas.STOMACH,
+            "#DFA730": DiagramAreas.LEFT_SHOULDER,
+            "#DF309A": DiagramAreas.LEFT_UPPER_ARM,
+            "#1C9617": DiagramAreas.LEFT_LOWER_ARM,
+            "#171E96": DiagramAreas.LEFT_HAND,
+            "#C34C60": DiagramAreas.LEFT_THIGH,
+            "#B3C34C": DiagramAreas.LEFT_CALF,
+            "#30BDDF": DiagramAreas.LEFT_FOOT,
+            "#DF7230": DiagramAreas.RIGHT_SHOULDER,
+            "#30DFB6": DiagramAreas.RIGHT_UPPER_ARM,
+            "#961739": DiagramAreas.RIGHT_LOWER_ARM,
+            "#DFE13F": DiagramAreas.RIGHT_HAND,
+            "#BC4CC3": DiagramAreas.RIGHT_THIGH,
+            "#40DF30": DiagramAreas.RIGHT_CALF,
+            "#305FDF": DiagramAreas.RIGHT_FOOT
+        }
 
 class Question:
     def __init__(
