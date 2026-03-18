@@ -511,9 +511,9 @@ class GrabExperiment:
         for q in template.get_questions():
             elements = []
             elements.extend(q.checkboxes)
-
-            if hasattr(q, "texts"):
-                elements.extend(q.texts)
+            elements.extend(q.texts)
+            elements.extend(q.tables)
+            elements.extend(q.diagramms)
 
             for e in elements:
                 page = e.page
@@ -527,3 +527,23 @@ class GrabExperiment:
                     bounds[page][1] = max(bounds[page][1], bottom)
 
         return bounds
+
+    @staticmethod
+    def get_question_top(question: Question) -> int:
+        # start value at page bottom 
+        top = 5850
+        elements = []
+        elements.extend(question.checkboxes)
+        elements.extend(question.texts)
+        elements.extend(question.tables)
+        elements.extend(question.diagramms)
+
+        page = elements[0].page
+        for e in elements:
+            if e.page <= page and e.dy <= top:
+                page = e.page
+                top = e.dy
+        
+        result = top + ((page - 1) * 5850)
+        return result
+

@@ -49,6 +49,12 @@ class SurveyWindow(qtWid.QWidget):
         weirdButton.clicked.connect(self.reportWeirdness)
         mainLayout.addWidget(weirdButton)
 
+        self.zoom_slider = qtWid.QSlider(orientation=QtCore.Qt.Orientation.Horizontal)
+        self.zoom_slider.setRange(1, 20)
+        self.zoom_slider.setValue(2)
+        self.zoom_slider.valueChanged.connect(self.zoom)
+        mainLayout.addWidget(self.zoom_slider)
+
         self.splitter = qtWid.QSplitter()
 
         # Save shortcut
@@ -59,7 +65,7 @@ class SurveyWindow(qtWid.QWidget):
         self.questionScroll = qtWid.QScrollArea()
         self.questionScroll.setWidgetResizable(True)
 
-        questionContainer = qtWid.QWidget()
+        self.questionContainer = qtWid.QWidget()
         qlayout = qtWid.QVBoxLayout()
 
         # Example questions
@@ -69,19 +75,29 @@ class SurveyWindow(qtWid.QWidget):
         self.questions = []
         questions = typeTemplate.get_questions()
 
+        self.spacers = []
+        self.spacer_sizes = []
+        bottom_of_last_question = 0
         for q in questions:
+            current_top = GrabExperiment.get_question_top(q)
+            needed_space = current_top - bottom_of_last_question - 50
+            spacer = qtWid.QSpacerItem(0, int(needed_space * self.get_zoom()), qtWid.QSizePolicy.Minimum, qtWid.QSizePolicy.Fixed)
+            self.spacers.append(spacer)
+            self.spacer_sizes.append(needed_space)
+            qlayout.addItem(spacer) 
             q_json = self.data[str(q.num)]
             qw = QuestionWidget(q, q_json)
             qw.elementFocused.connect(self.highlight_element)
             self.questions.append(qw)
             qlayout.addWidget(qw)
+            bottom_of_last_question = current_top + qw.sizeHint().height()
 
         QtCore.QTimer.singleShot(0, self.init_images)
 
         qlayout.addStretch()
-        questionContainer.setLayout(qlayout)
+        self.questionContainer.setLayout(qlayout)
 
-        self.questionScroll.setWidget(questionContainer)
+        self.questionScroll.setWidget(self.questionContainer)
 
         # RIGHT SIDE (images)
         self.imageScroll = qtWid.QScrollArea()
@@ -139,6 +155,22 @@ class SurveyWindow(qtWid.QWidget):
     def done(self):
         self.status = "Done"
         self.go_back()
+    
+    #zoom handling
+    def get_zoom(self) -> float:
+        slider_meaning = []
+        slider_meaning.extend([x/20.0 for x in range(1, 20, 2)])
+        slider_meaning.extend(range(11))
+        return slider_meaning[self.zoom_slider.value()]
+
+    def zoom(self):
+        scale = self.get_zoom()
+        
+        for spacer, spacer_size in zip(self.spacers, self.spacer_sizes):
+            spacer.changeSize(0, int(spacer_size * scale), qtWid.QSizePolicy.Minimum, qtWid.QSizePolicy.Fixed)
+        
+        self.init_images()
+        self.questionContainer.layout().invalidate()
 
     # image handling
 
@@ -182,15 +214,13 @@ class SurveyWindow(qtWid.QWidget):
         return heights
 
     def init_images(self):
-        scales = self.compute_page_scales()
+        scale = self.get_zoom()
         nr_pages = self.template.get_num_pages()
 
         self.pageWidgets = []
         for i in range(1, nr_pages + 1):
             path = os.path.join(self.dataDir, f"page-{i:03}.jpg")
             pix = QtGui.QPixmap(path)
-
-            scale = scales.get(i, 0.3)
 
             pix = pix.scaled(
                 int(pix.width() * scale),
