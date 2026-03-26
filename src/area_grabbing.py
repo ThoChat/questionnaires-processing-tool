@@ -245,17 +245,107 @@ def parse_single_data(imgDir, files, template: Template) -> str:
         tableData = []
         for table in question.tables:
             top = int(AnkerPos.Y.value + table.dy)
-            step_y = (int)(table.size_y / np.size(table.rows))
+            step_y = (int)(table.size_y / len(table.rows))
+            table_result = {
+                "name": f"Table_{table.page}_{question.num}",
+                "rows": []
+            }
+
             for i, row in enumerate(table.rows):
-                for dx, size_x, column in zip(table.dx, table.size_x, table.columns):
+                for j, (dx, size_x, column) in enumerate(zip(table.dx, table.size_x, table.columns)):
                     left = int(AnkerPos.X.value + dx)
+                    # Adjust cell height: remove top/bottom padding (13px)
+                    cell_top = top + i * step_y + 13
+                    cell_bottom = top + (i + 1) * step_y - 13
                     cell_img = pages[table.page].img[
-                        (top + i * step_y + 13) : (top + (i + 1) * step_y - 13),
-                        (left) : (left + size_x),
+                        cell_top:cell_bottom,
+                        left:left + size_x,
                     ]
+
+                    # Calculate black percentage
                     grade = non_background_percentage(cell_img)
-                    print(f"{row}-{column}-{grade}")
-                    # TODO: Parse table data to json file
+
+                    # Skip if not selected (below threshold)
+                    if grade <= 20:  # threshold
+                        continue
+
+                    # Now: determine which body part this cell corresponds to
+                    # We use the precomputed mask from `create_diagram_masks`
+                    # But we need to load it first
+
+                    # Load the area mapping (only once per run)
+                    # We'll do this at the top of the function or as a global
+                    # For now, we assume it's already created and saved
+
+                    # Load the area mapping from pickle
+                    try:
+                        with open("src/outline_figures.pickle", "rb") as f:
+                            areaDict = pickle.load(f)
+                    except FileNotFoundError:
+                        raise RuntimeError("Missing 'outline_figures.pickle'. Run 'create_diagram_masks' first!")
+
+                    # Get the color of the center pixel of the cell
+                    h, w = cell_img.shape[:2]
+                    center_y = h // 2
+                    center_x = w // 2
+                    center_color = cell_img[center_y, center_x]
+                    color_hex = '#' + rgb_to_hex(center_color)
+
+                    # Find which body part this color corresponds to
+                    body_part = None
+                    for key, value in areaDict.items():
+                        if key == color_hex:
+                            body_part = DiagramAreas(value[0][0]).name  # e.g. "HEAD"
+                            break
+
+                    if not body_part:
+                        # Optional: log unknown color
+                        continue
+
+                    # Now: map the column name to intensity/safety
+                    # We assume the columns are in order: e.g. ["immer", "oft", ...]
+                    # But you need to know which column means what
+                    # Let's assume:
+                    # - First column: "immer" → "sehr stark"
+                    # - Second: "oft" → "stark"
+                    # - Third: "gelegentlich" → "mittelmaessig"
+                    # - Fourth: "einmalig" → "schwach"
+                    # - Fifth: "-" → skip
+
+                    intensity_map = {
+                        "immer": "sehr stark",
+                        "oft": "stark",
+                        "gelegentlich": "mittelmaessig",
+                        "einmalig": "schwach",
+                        "-": None
+                    }
+
+                    safety_map = {
+                        "sehr stark": "sehr sicher",
+                        "stark": "sicher",
+                        "mittelmaessig": "mittelmaessig",
+                        "schwach": "unsicher",
+                        "sehr schwach": "sehr unsicher"
+                    }
+
+                    # Get intensity from column
+                    intensity = intensity_map.get(column, None)
+                    if not intensity:
+                        continue  # skip unknown column
+
+                    safety = safety_map.get(intensity, None)
+
+                    # Add to result
+                    table_result["rows"].append({
+                        "symbol": row,
+                        "bodyPart": body_part,
+                        "intensity": intensity,
+                        "safety": safety
+                    })
+
+            # Only add table if at least one row was selected
+            if table_result["rows"]:
+                tableData.append(table_result)
 
         pathToDiagram = ""
         for diagramm in question.diagramms:
