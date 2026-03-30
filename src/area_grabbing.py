@@ -274,9 +274,9 @@ def parse_single_data(imgDir, files, template: Template) -> str:
                     "name": f"Table_{table.page}_{question.num}",
                     "data": table_result
                 })
-        # ← for table ist hier zuende
 
-        # Merge nur wenn 3 Subtabellen (Frage 17)
+
+        # Merge only if there are three sutables
         if len(tableData) == 3:
             merged = {}
             for symbol in tableData[0]["data"].keys():
@@ -296,14 +296,14 @@ def parse_single_data(imgDir, files, template: Template) -> str:
                     }
             tableData = [{"name": f"Symbols_Q{question.num}", "data": merged}]
 
-        # Diagramm extrahieren
+   
         pathToDiagram = ""
         for diagramm in question.diagramms:
             img = extract_diagramm(diagramm, pages[diagramm.page])
             pathToDiagram = os.path.join(imgDir, f"question_{question.num}_diagramm.jpg")
             cv2.imwrite(pathToDiagram, img)
 
-        # questionData zusammenbauen und speichern
+  
         questionData = {}
         questionData["question"] = question.questionText
         if len(checkboxData) > 0:
@@ -315,9 +315,8 @@ def parse_single_data(imgDir, files, template: Template) -> str:
         if pathToDiagram != "":
             questionData["diagram"] = {"file": pathToDiagram}
         subjectData[str(question.num)] = questionData
-    # ← for question ist hier zuende
 
-    # Seiten-Bilder überschreiben
+
     for key, value in pages.items():
         imgFileName = f"page-00{key}.jpg"
         cv2.imwrite(os.path.join(imgDir, imgFileName), value.img)
