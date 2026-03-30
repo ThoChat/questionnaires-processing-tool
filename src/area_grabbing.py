@@ -245,16 +245,15 @@ def parse_single_data(imgDir, files, template: Template) -> str:
         tableData = []
         for table in question.tables:
             top = int(AnkerPos.Y.value + table.dy)
-            step_y = (int)(table.size_y / len(table.rows))
-            table_result = {
-                "name": f"Table_{table.page}_{question.num}",
-                "rows": []
-            }
+            step_y = int(table.size_y / len(table.rows))
+            table_result = {}
 
             for i, row in enumerate(table.rows):
+                if row not in table_result:
+                    table_result[row] = {}
+
                 for j, (dx, size_x, column) in enumerate(zip(table.dx, table.size_x, table.columns)):
                     left = int(AnkerPos.X.value + dx)
-                    # Adjust cell height: remove top/bottom padding (13px)
                     cell_top = top + i * step_y + 13
                     cell_bottom = top + (i + 1) * step_y - 13
                     cell_img = pages[table.page].img[
@@ -262,99 +261,49 @@ def parse_single_data(imgDir, files, template: Template) -> str:
                         left:left + size_x,
                     ]
 
-                    # Calculate black percentage
+
                     grade = non_background_percentage(cell_img)
+                    print(f"Table Q{question.num} row={row} col={column}: {grade:.1f}%")
 
-                    # Skip if not selected (below threshold)
-                    if grade <= 20:  # threshold
-                        continue
 
-                    # Now: determine which body part this cell corresponds to
-                    # We use the precomputed mask from `create_diagram_masks`
-                    # But we need to load it first
+                    if grade > threshold*0.05:
+                        table_result[row][column] = True
 
-                    # Load the area mapping (only once per run)
-                    # We'll do this at the top of the function or as a global
-                    # For now, we assume it's already created and saved
+            if table_result:
+                tableData.append({
+                    "name": f"Table_{table.page}_{question.num}",
+                    "data": table_result
+                })
+        # ← for table ist hier zuende
 
-                    # Load the area mapping from pickle
-                    try:
-                        with open("src/outline_figures.pickle", "rb") as f:
-                            areaDict = pickle.load(f)
-                    except FileNotFoundError:
-                        raise RuntimeError("Missing 'outline_figures.pickle'. Run 'create_diagram_masks' first!")
+        # Merge nur wenn 3 Subtabellen (Frage 17)
+        if len(tableData) == 3:
+            merged = {}
+            for symbol in tableData[0]["data"].keys():
+                freq_cols   = tableData[0]["data"].get(symbol, {})
+                intens_cols = tableData[1]["data"].get(symbol, {})
+                safety_cols = tableData[2]["data"].get(symbol, {})
 
-                    # Get the color of the center pixel of the cell
-                    h, w = cell_img.shape[:2]
-                    center_y = h // 2
-                    center_x = w // 2
-                    center_color = cell_img[center_y, center_x]
-                    color_hex = '#' + rgb_to_hex(center_color)
+                frequency = next((col for col, checked in freq_cols.items()   if checked), None)
+                intensity = next((col for col, checked in intens_cols.items() if checked), None)
+                safety    = next((col for col, checked in safety_cols.items() if checked), None)
 
-                    # Find which body part this color corresponds to
-                    body_part = None
-                    for key, value in areaDict.items():
-                        if key == color_hex:
-                            body_part = DiagramAreas(value[0][0]).name  # e.g. "HEAD"
-                            break
-
-                    if not body_part:
-                        # Optional: log unknown color
-                        continue
-
-                    # Now: map the column name to intensity/safety
-                    # We assume the columns are in order: e.g. ["immer", "oft", ...]
-                    # But you need to know which column means what
-                    # Let's assume:
-                    # - First column: "immer" → "sehr stark"
-                    # - Second: "oft" → "stark"
-                    # - Third: "gelegentlich" → "mittelmaessig"
-                    # - Fourth: "einmalig" → "schwach"
-                    # - Fifth: "-" → skip
-
-                    intensity_map = {
-                        "immer": "sehr stark",
-                        "oft": "stark",
-                        "gelegentlich": "mittelmaessig",
-                        "einmalig": "schwach",
-                        "-": None
-                    }
-
-                    safety_map = {
-                        "sehr stark": "sehr sicher",
-                        "stark": "sicher",
-                        "mittelmaessig": "mittelmaessig",
-                        "schwach": "unsicher",
-                        "sehr schwach": "sehr unsicher"
-                    }
-
-                    # Get intensity from column
-                    intensity = intensity_map.get(column, None)
-                    if not intensity:
-                        continue  # skip unknown column
-
-                    safety = safety_map.get(intensity, None)
-
-                    # Add to result
-                    table_result["rows"].append({
-                        "symbol": row,
-                        "bodyPart": body_part,
+                if any([frequency, intensity, safety]):
+                    merged[symbol] = {
+                        "frequency": frequency,
                         "intensity": intensity,
-                        "safety": safety
-                    })
+                        "safety":    safety
+                    }
+            tableData = [{"name": f"Symbols_Q{question.num}", "data": merged}]
 
-            # Only add table if at least one row was selected
-            if table_result["rows"]:
-                tableData.append(table_result)
-
+        # Diagramm extrahieren
         pathToDiagram = ""
         for diagramm in question.diagramms:
             img = extract_diagramm(diagramm, pages[diagramm.page])
-            pathToDiagram = os.path.join(
-                imgDir, f"question_{question.num}_diagramm.jpg"
-            )
+            pathToDiagram = os.path.join(imgDir, f"question_{question.num}_diagramm.jpg")
             cv2.imwrite(pathToDiagram, img)
 
+        # questionData zusammenbauen und speichern
         questionData = {}
         questionData["question"] = question.questionText
         if len(checkboxData) > 0:
@@ -366,12 +315,12 @@ def parse_single_data(imgDir, files, template: Template) -> str:
         if pathToDiagram != "":
             questionData["diagram"] = {"file": pathToDiagram}
         subjectData[str(question.num)] = questionData
+    # ← for question ist hier zuende
 
+    # Seiten-Bilder überschreiben
     for key, value in pages.items():
         imgFileName = f"page-00{key}.jpg"
-        cv2.imwrite(
-            os.path.join(imgDir, imgFileName), value.img
-        )  # this overwrites the old image
+        cv2.imwrite(os.path.join(imgDir, imgFileName), value.img)
 
     dataFileName = "surveyData.json"
     with open(os.path.join(imgDir, dataFileName), "w") as f:
