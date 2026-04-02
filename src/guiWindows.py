@@ -49,12 +49,6 @@ class SurveyWindow(qtWid.QWidget):
         weirdButton.clicked.connect(self.reportWeirdness)
         mainLayout.addWidget(weirdButton)
 
-        self.zoom_slider = qtWid.QSlider(orientation=QtCore.Qt.Orientation.Horizontal)
-        self.zoom_slider.setRange(1, 20)
-        self.zoom_slider.setValue(4)
-        self.zoom_slider.valueChanged.connect(self.init_images)
-        mainLayout.addWidget(self.zoom_slider)
-
         self.splitter = qtWid.QSplitter()
 
         # Save shortcut
@@ -157,10 +151,8 @@ class SurveyWindow(qtWid.QWidget):
     
     #zoom handling
     def get_zoom(self) -> float:
-        slider_meaning = []
-        slider_meaning.extend([x/20.0 for x in range(1, 20, 2)])
-        slider_meaning.extend(range(11))
-        return slider_meaning[self.zoom_slider.value()]
+        # TODO: remove
+        return 0.3
 
     # image handling
 
