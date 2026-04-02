@@ -33,7 +33,7 @@ from pdf2image import convert_from_path
 if platform.system() == "Windows":
     # Some additional downloading and setup
     # Check installation guide for pdf2image: https://pypi.org/project/pdf2image/
-    path_to_poppler_exe = Path(r"C:\\.")
+    path_to_poppler_exe = Path(r"C:/poppler/poppler-25.12.0/Library\bin")
 
 #----- project includes
 from src.survey_templates import GrabExperiment, ExperimentTypes
@@ -112,20 +112,29 @@ class pdfConverter():
         participantNr = 0
         currDir = ""
         files = []
-        for nr in range(0, len(os.listdir(self.tempDir)), 1):
+
+        import re
+        # get all files
+        all_files = os.listdir(self.tempDir)
+
+        # filter pages an not the numbers
+        page_files = [f for f in all_files if re.match(r"page-\d+\." + self.imgType, f)]
+
+        # now sort in page numbers
+        page_files.sort(key=lambda x: int(re.search(r"\d+", x).group()))
+
+        for nr, file_name in enumerate(page_files):
             if surveyPage == 0:
                 participantNr += 1 #start at one
                 currDir = os.path.join(self.mainDir, f"surveyResponse_{participantNr:03}")
                 if not os.path.isdir(currDir):
                     os.mkdir(currDir)
 
-            pathToFile = os.path.join(self.tempDir, f"page-{(nr+1):03}." + self.imgType) #pdf2image starts with page 1
-            if os.path.isfile(pathToFile):
-                pageName = f"page-{(surveyPage+1):03}." + self.imgType
-                os.rename(pathToFile, os.path.join(currDir, pageName))
-                files.append(pageName)
-            else:
-                raise RuntimeError(f"Could not find {pathToFile}. Recheck if expected file names are correct!")
+            pathToFile = os.path.join(self.tempDir, file_name)
+
+            pageName = f"page-{(surveyPage+1):03}." + self.imgType
+            os.rename(pathToFile, os.path.join(currDir, pageName))
+            files.append(pageName)
 
             surveyPage += 1
             if surveyPage >= nr_pages:
@@ -146,7 +155,7 @@ class pdfConverter():
 
         #and delete temp folder
         for file in os.listdir(self.tempDir):
-            os.remove(file)
+            os.remove(os.path.join(self.tempDir, file))
         os.rmdir(self.tempDir)
 
     def prepareFigureImg(self):

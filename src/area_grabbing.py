@@ -245,26 +245,65 @@ def parse_single_data(imgDir, files, template: Template) -> str:
         tableData = []
         for table in question.tables:
             top = int(AnkerPos.Y.value + table.dy)
-            step_y = (int)(table.size_y / np.size(table.rows))
-            for i, row in enumerate(table.rows):
-                for dx, size_x, column in zip(table.dx, table.size_x, table.columns):
-                    left = int(AnkerPos.X.value + dx)
-                    cell_img = pages[table.page].img[
-                        (top + i * step_y + 13) : (top + (i + 1) * step_y - 13),
-                        (left) : (left + size_x),
-                    ]
-                    grade = non_background_percentage(cell_img)
-                    print(f"{row}-{column}-{grade}")
-                    # TODO: Parse table data to json file
+            step_y = int(table.size_y / len(table.rows))
+            table_result = {}
 
+            for i, row in enumerate(table.rows):
+                if row not in table_result:
+                    table_result[row] = {}
+
+                for j, (dx, size_x, column) in enumerate(zip(table.dx, table.size_x, table.columns)):
+                    left = int(AnkerPos.X.value + dx)
+                    cell_top = top + i * step_y + 13
+                    cell_bottom = top + (i + 1) * step_y - 13
+                    cell_img = pages[table.page].img[
+                        cell_top:cell_bottom,
+                        left:left + size_x,
+                    ]
+
+
+                    grade = non_background_percentage(cell_img)
+                    print(f"Table Q{question.num} row={row} col={column}: {grade:.1f}%")
+
+
+                    if grade > threshold*0.05:
+                        table_result[row][column] = True
+
+            if table_result:
+                tableData.append({
+                    "name": f"Table_{table.page}_{question.num}",
+                    "data": table_result
+                })
+
+
+        # Merge only if there are three sutables
+        if len(tableData) == 3:
+            merged = {}
+            for symbol in tableData[0]["data"].keys():
+                freq_cols   = tableData[0]["data"].get(symbol, {})
+                intens_cols = tableData[1]["data"].get(symbol, {})
+                safety_cols = tableData[2]["data"].get(symbol, {})
+
+                frequency = next((col for col, checked in freq_cols.items()   if checked), None)
+                intensity = next((col for col, checked in intens_cols.items() if checked), None)
+                safety    = next((col for col, checked in safety_cols.items() if checked), None)
+
+                if any([frequency, intensity, safety]):
+                    merged[symbol] = {
+                        "frequency": frequency,
+                        "intensity": intensity,
+                        "safety":    safety
+                    }
+            tableData = [{"name": f"Symbols_Q{question.num}", "data": merged}]
+
+   
         pathToDiagram = ""
         for diagramm in question.diagramms:
             img = extract_diagramm(diagramm, pages[diagramm.page])
-            pathToDiagram = os.path.join(
-                imgDir, f"question_{question.num}_diagramm.jpg"
-            )
+            pathToDiagram = os.path.join(imgDir, f"question_{question.num}_diagramm.jpg")
             cv2.imwrite(pathToDiagram, img)
 
+  
         questionData = {}
         questionData["question"] = question.questionText
         if len(checkboxData) > 0:
@@ -277,11 +316,10 @@ def parse_single_data(imgDir, files, template: Template) -> str:
             questionData["diagram"] = {"file": pathToDiagram}
         subjectData[str(question.num)] = questionData
 
+
     for key, value in pages.items():
         imgFileName = f"page-00{key}.jpg"
-        cv2.imwrite(
-            os.path.join(imgDir, imgFileName), value.img
-        )  # this overwrites the old image
+        cv2.imwrite(os.path.join(imgDir, imgFileName), value.img)
 
     dataFileName = "surveyData.json"
     with open(os.path.join(imgDir, dataFileName), "w") as f:
