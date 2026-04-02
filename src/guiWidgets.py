@@ -408,11 +408,6 @@ class SnappingScrollBar(qtWid.QScrollBar):
             for other in self.toSync:
                 other.snapToIndex(closest_idx)
     
-    def wheelEvent(self, event):
-        delta = event.angleDelta().y() / 120 * self.singleStep()
-        tentative = self.value() + delta
-        self.snapToNearest(tentative)
-    
     def snapToIndex(self, index):
         if index < len(self.fixed_positions):
             self.setValue(self.fixed_positions[index])
