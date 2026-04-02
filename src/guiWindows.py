@@ -6,7 +6,7 @@ from PyQt5 import QtGui, QtCore
 import qdarktheme
 
 from src.survey_templates import GrabExperiment, AnkerPos
-from src.guiWidgets import ImagePage, QuestionWidget, SnappingScrollBar, SurveyEntryWidget
+from src.guiWidgets import ImagePage, NoHorizontalScrollArea, QuestionWidget, SnappingScrollBar, SurveyEntryWidget
 from src.guiIO import readData, saveData
 
 __license__ = "MIT"
@@ -62,11 +62,11 @@ class SurveyWindow(qtWid.QWidget):
         saveShortcut.activated.connect(self.save)
 
         # LEFT SIDE (questions)
-        self.questionScroll = qtWid.QScrollArea()
+        self.questionScroll = NoHorizontalScrollArea()
         self.questionScroll.setWidgetResizable(True)
 
         self.questionContainer = qtWid.QWidget()
-        qlayout = qtWid.QVBoxLayout()
+        qlayout = qtWid.QVBoxLayout(self.questionContainer)
 
         # Example questions
         self.pages = []
@@ -95,10 +95,11 @@ class SurveyWindow(qtWid.QWidget):
         qlayout.addStretch()
         questionScrollBar = SnappingScrollBar(self.scroll_ticks_left)
         self.questionScroll.setVerticalScrollBar(questionScrollBar)
-        self.questionScroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.questionScroll.setSizePolicy(qtWid.QSizePolicy.Preferred, qtWid.QSizePolicy.Expanding)
         self.questionContainer.setLayout(qlayout)
 
         self.questionScroll.setWidget(self.questionContainer)
+        self.questionScroll.setWidgetResizable(True)
 
         # RIGHT SIDE (images)
         self.imageScroll = qtWid.QScrollArea()

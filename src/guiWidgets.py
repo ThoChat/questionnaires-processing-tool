@@ -116,6 +116,9 @@ class BoundTextEdit(qtWid.QTextEdit):
 
         self.textChanged.connect(self.write_json)
         self.setTabChangesFocus(True)
+        self.setLineWrapMode(qtWid.QTextEdit.WidgetWidth)
+        self.setMinimumWidth(0)
+        self.setSizePolicy(qtWid.QSizePolicy.MinimumExpanding, qtWid.QSizePolicy.Fixed)
 
     def write_json(self):
         self.json_ref["text"] = self.toPlainText()
@@ -388,28 +391,27 @@ class SnappingScrollBar(qtWid.QScrollBar):
         self.setRange(0, self.fixed_positions[-1])
         self.setSingleStep(1)
         self.sliderReleased.connect(self.snapToNearest)
+        self.index = 0
         self.toSync = []
-
+    
     def snapToNearest(self, value=None):
         if value is None:
             value = self.value()
-        # Find index of closest position
+        self.setValue(value)
+
+    def setValue(self, value):
         closest_idx = min(range(len(self.fixed_positions)),
                           key=lambda i: abs(self.fixed_positions[i] - value))
-        self.setValue(self.fixed_positions[closest_idx])
-        for other in self.toSync:
-            other.snapToIndex(closest_idx)
-
+        super().setValue(self.fixed_positions[closest_idx])
+        if self.index != closest_idx:
+            self.index = closest_idx
+            for other in self.toSync:
+                other.snapToIndex(closest_idx)
+    
     def wheelEvent(self, event):
         delta = event.angleDelta().y() / 120 * self.singleStep()
         tentative = self.value() + delta
         self.snapToNearest(tentative)
-    
-    def actionTriggered(self, action):
-        super().actionTriggered(action)
-        if action in (qtWid.QAbstractSlider.SliderSingleStepAdd, qtWid.QAbstractSlider.SliderSingleStepSub,
-                    qtWid.QAbstractSlider.SliderPageStepAdd, qtWid.QAbstractSlider.SliderPageStepSub):
-            self.snap_to_nearest()
     
     def snapToIndex(self, index):
         if index < len(self.fixed_positions):
@@ -417,3 +419,23 @@ class SnappingScrollBar(qtWid.QScrollBar):
     
     def addSync(self, other):
         self.toSync.append(other)
+    
+
+# ---------------------------
+# Scroll area hack
+# ---------------------------
+class NoHorizontalScrollArea(qtWid.QScrollArea):
+    def ensureWidgetVisible(self, childWidget, xMargin=0, yMargin=0):
+        # Only adjust vertical scrollbar
+        if childWidget:
+            pos = childWidget.mapTo(self.widget(), QtCore.QPoint(0, 0))
+            self.verticalScrollBar().setValue(pos.y())
+    
+    def focusNextPrevChild(self, next):
+        hbar = self.horizontalScrollBar()
+        old = hbar.value()
+
+        result = super().focusNextPrevChild(next)
+
+        hbar.setValue(old)  # restore horizontal position
+        return result
