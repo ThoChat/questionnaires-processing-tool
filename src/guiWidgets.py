@@ -377,3 +377,43 @@ class SurveyEntryWidget(qtWid.QFrame):
 
     def mousePressEvent(self, event):
         self.clicked.emit(self.name)
+
+# ---------------------------
+# Scroll Bar Widget
+# ---------------------------
+class SnappingScrollBar(qtWid.QScrollBar):
+    def __init__(self, positions, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fixed_positions = positions
+        self.setRange(0, self.fixed_positions[-1])
+        self.setSingleStep(1)
+        self.sliderReleased.connect(self.snapToNearest)
+        self.toSync = []
+
+    def snapToNearest(self, value=None):
+        if value is None:
+            value = self.value()
+        # Find index of closest position
+        closest_idx = min(range(len(self.fixed_positions)),
+                          key=lambda i: abs(self.fixed_positions[i] - value))
+        self.setValue(self.fixed_positions[closest_idx])
+        for other in self.toSync:
+            other.snapToIndex(closest_idx)
+
+    def wheelEvent(self, event):
+        delta = event.angleDelta().y() / 120 * self.singleStep()
+        tentative = self.value() + delta
+        self.snapToNearest(tentative)
+    
+    def actionTriggered(self, action):
+        super().actionTriggered(action)
+        if action in (qtWid.QAbstractSlider.SliderSingleStepAdd, qtWid.QAbstractSlider.SliderSingleStepSub,
+                    qtWid.QAbstractSlider.SliderPageStepAdd, qtWid.QAbstractSlider.SliderPageStepSub):
+            self.snap_to_nearest()
+    
+    def snapToIndex(self, index):
+        if index < len(self.fixed_positions):
+            self.setValue(self.fixed_positions[index])
+    
+    def addSync(self, other):
+        self.toSync.append(other)

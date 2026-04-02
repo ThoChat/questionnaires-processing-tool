@@ -6,7 +6,7 @@ from PyQt5 import QtGui, QtCore
 import qdarktheme
 
 from src.survey_templates import GrabExperiment, AnkerPos
-from src.guiWidgets import ImagePage, QuestionWidget, SurveyEntryWidget
+from src.guiWidgets import ImagePage, QuestionWidget, SnappingScrollBar, SurveyEntryWidget
 from src.guiIO import readData, saveData
 
 __license__ = "MIT"
@@ -51,8 +51,8 @@ class SurveyWindow(qtWid.QWidget):
 
         self.zoom_slider = qtWid.QSlider(orientation=QtCore.Qt.Orientation.Horizontal)
         self.zoom_slider.setRange(1, 20)
-        self.zoom_slider.setValue(2)
-        self.zoom_slider.valueChanged.connect(self.zoom)
+        self.zoom_slider.setValue(4)
+        self.zoom_slider.valueChanged.connect(self.init_images)
         mainLayout.addWidget(self.zoom_slider)
 
         self.splitter = qtWid.QSplitter()
@@ -75,26 +75,27 @@ class SurveyWindow(qtWid.QWidget):
         self.questions = []
         questions = typeTemplate.get_questions()
 
-        self.spacers = []
-        self.spacer_sizes = []
+        self.scroll_ticks_left = []
+        self.scroll_ticks_right = []
+        zoom = self.get_zoom()
         bottom_of_last_question = 0
         for q in questions:
             current_top = GrabExperiment.get_question_top(q)
-            needed_space = current_top - bottom_of_last_question - 50
-            spacer = qtWid.QSpacerItem(0, int(needed_space * self.get_zoom()), qtWid.QSizePolicy.Minimum, qtWid.QSizePolicy.Fixed)
-            self.spacers.append(spacer)
-            self.spacer_sizes.append(needed_space)
-            qlayout.addItem(spacer) 
+            self.scroll_ticks_left.append(bottom_of_last_question)
+            self.scroll_ticks_right.append(int(current_top * zoom))
             q_json = self.data[str(q.num)]
             qw = QuestionWidget(q, q_json)
             qw.elementFocused.connect(self.highlight_element)
             self.questions.append(qw)
             qlayout.addWidget(qw)
-            bottom_of_last_question = current_top + qw.sizeHint().height()
+            bottom_of_last_question = bottom_of_last_question + qw.sizeHint().height()
 
         QtCore.QTimer.singleShot(0, self.init_images)
 
         qlayout.addStretch()
+        questionScrollBar = SnappingScrollBar(self.scroll_ticks_left)
+        self.questionScroll.setVerticalScrollBar(questionScrollBar)
+        self.questionScroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.questionContainer.setLayout(qlayout)
 
         self.questionScroll.setWidget(self.questionContainer)
@@ -109,6 +110,8 @@ class SurveyWindow(qtWid.QWidget):
         ilayout.addStretch()
         imageContainer.setLayout(ilayout)
 
+        imageScrollBar = SnappingScrollBar(self.scroll_ticks_right)
+        self.imageScroll.setVerticalScrollBar(imageScrollBar)
         self.imageScroll.setWidget(imageContainer)
 
         self.splitter.addWidget(self.questionScroll)
@@ -119,13 +122,8 @@ class SurveyWindow(qtWid.QWidget):
         self.setLayout(mainLayout)
 
         # Sync scrollbars
-        self.questionScroll.verticalScrollBar().valueChanged.connect(
-            self.imageScroll.verticalScrollBar().setValue
-        )
-
-        self.imageScroll.verticalScrollBar().valueChanged.connect(
-            self.questionScroll.verticalScrollBar().setValue
-        )
+        questionScrollBar.addSync(imageScrollBar)
+        imageScrollBar.addSync(questionScrollBar)
 
         self.showMaximized()
 
@@ -162,15 +160,6 @@ class SurveyWindow(qtWid.QWidget):
         slider_meaning.extend([x/20.0 for x in range(1, 20, 2)])
         slider_meaning.extend(range(11))
         return slider_meaning[self.zoom_slider.value()]
-
-    def zoom(self):
-        scale = self.get_zoom()
-        
-        for spacer, spacer_size in zip(self.spacers, self.spacer_sizes):
-            spacer.changeSize(0, int(spacer_size * scale), qtWid.QSizePolicy.Minimum, qtWid.QSizePolicy.Fixed)
-        
-        self.init_images()
-        self.questionContainer.layout().invalidate()
 
     # image handling
 
