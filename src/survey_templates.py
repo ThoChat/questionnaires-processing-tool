@@ -149,7 +149,7 @@ class Bottleneck(Template):
     def __init__(self) -> None:
         question1 = Question(
             num=1,
-            questionText="not defined yet",
+            questionText="Hatten Sie gerade das Gefuehl in einer Situation zu sein, in der Sie sich gedraengt oder gequetscht gefuehlt haben?",
             checkboxes=[
                 Checkbox(page=1, dx=37, dy=800, text="ja"),
                 Checkbox(page=1, dx=37, dy=1385, text="nein"),
@@ -159,7 +159,7 @@ class Bottleneck(Template):
         )
         question2 = Question(
             num=2,
-            questionText="not defined yet",
+            questionText="Wie wohl haben Sie sich in der Menschenmenge gefuehlt?",
             checkboxes=[
                 Checkbox(page=1, dx=37, dy=1939, text="sehr wohl"),
                 Checkbox(page=1, dx=37, dy=2059, text="eher wohl"),
@@ -170,7 +170,7 @@ class Bottleneck(Template):
         )
         question3 = Question(
             num=3,
-            questionText="not defined yet",
+            questionText="Hatten Sie waehrend des Durchlaufs Angst in der Menschenmenge?",
             checkboxes=[
                 Checkbox(page=1, dx=37, dy=2860, text="nein"),
                 Checkbox(page=1, dx=37, dy=2986, text="leicht"),
@@ -180,7 +180,7 @@ class Bottleneck(Template):
         )
         question4 = Question(
             num=4,
-            questionText="not defined yet",
+            questionText="Wie wuerden Sie Ihre eigene koerperliche Stabilitaet / Standfestigkeit im letzten Durchlauf einschaetzen?",
             checkboxes=[
                 Checkbox(page=1, dx=37, dy=3764, text="sehr gut"),
                 Checkbox(page=1, dx=37, dy=3886, text="gut"),
@@ -191,7 +191,7 @@ class Bottleneck(Template):
         )
         question5 = Question(
             num=5,
-            questionText="not defined yet",
+            questionText="Wie hoch schaetzen Sie Ihr persoenliches Risiko ein, im letzten Durchlauf Ihr Gleichgewicht zu verlieren?",
             checkboxes=[
                 Checkbox(page=2, dx=37, dy=455, text="sehr hoch"),
                 Checkbox(page=2, dx=37, dy=575, text="hoch"),
@@ -202,7 +202,7 @@ class Bottleneck(Template):
         )
         question6 = Question(
             num=6,
-            questionText="not defined yet",
+            questionText="Haben Sie eine Strategie/Routine waehrend der letzten Durchlaeufe entwickelt, wie Sie sich in der Menschemenge bewegen?",
             checkboxes=[
                 Checkbox(page=2, dx=37, dy=1472, text="Ja"),
                 Checkbox(page=2, dx=37, dy=1836, text="Nein"),
@@ -211,7 +211,8 @@ class Bottleneck(Template):
         )
         question7 = Question(
             num=7,
-            questionText="not defined yet",
+            questionText="Haben Sie das efuehl, dass die Gruppe eine Strategie/Routine waehrend der letzten Durchlaeufe entwickelt hat," +
+                " wie sie sich durch die Engstellt bewegen?",
             checkboxes=[
                 Checkbox(page=2, dx=37, dy=2487, text="Ja"),
                 Checkbox(page=2, dx=37, dy=2851, text="Nein"),
@@ -220,7 +221,7 @@ class Bottleneck(Template):
         )
         question8 = Question(
             num=8,
-            questionText="not defined yet",
+            questionText="Wenn es eng wird, haben Sie eher Abstand gehalten oder sind Sie naeher an andere heran gegangen?",
             checkboxes=[
                 Checkbox(page=2, dx=37, dy=3386, text="Abstand gehalten"),
                 Checkbox(page=2, dx=37, dy=3509, text="neutral"),
@@ -229,18 +230,19 @@ class Bottleneck(Template):
         )
         question9 = Question(
             num=9,
-            questionText="not defined yet",
+            questionText="Haben Sie sich eher zurueckhaltend oder durchsetzungsstark waehrend " + 
+                "des Durchlaufs verhalten, wenn viele Menschen gleichzeitif durch eine Engstelle wollen?",
             checkboxes=[
-                Checkbox(page=2, dx=37, dy=4279, text="sehr gut"),
-                Checkbox(page=2, dx=37, dy=4400, text="gut"),
-                Checkbox(page=2, dx=37, dy=4522, text="neutral"),
-                Checkbox(page=2, dx=37, dy=4647, text="eher gering"),
-                Checkbox(page=2, dx=37, dy=4769, text="gering"),
+                Checkbox(page=2, dx=37, dy=4279, text="sehr zurueckhaltend"),
+                Checkbox(page=2, dx=37, dy=4400, text="eher zurueckhaltend"),
+                Checkbox(page=2, dx=37, dy=4522, text="weder noch"),
+                Checkbox(page=2, dx=37, dy=4647, text="eher durchsetzungsstark"),
+                Checkbox(page=2, dx=37, dy=4769, text="sehr durchsetzungsstark"),
             ],
         )
         question10 = Question(
             num=10,
-            questionText="not defined yet",
+            questionText="Wie sehr haben Sie im Gedraenge auf die Bewegungen anderer Personen geachtet?",
             checkboxes=[
                 Checkbox(page=3, dx=37, dy=454, text="wenig"),
                 Checkbox(page=3, dx=37, dy=576, text="neutral"),
@@ -249,7 +251,7 @@ class Bottleneck(Template):
         )
         question11 = Question(
             num=11,
-            questionText="not defined yet",
+            questionText="Gab es Situationen in denen Sie aufgrund der Menschenmenge nicht selbstbestimmt gehen konnten?",
             checkboxes=[
                 Checkbox(page=3, dx=37, dy=1323, text="ja"),
                 Checkbox(page=3, dx=37, dy=1446, text="nein"),
@@ -258,7 +260,7 @@ class Bottleneck(Template):
         )
         question12 = Question(
             num=12,
-            questionText="not defined yet",
+            questionText="Wie haben SIe Ihre ARme waehrend dieses Durchlaufs gehalten? (Mehrfachnennung moeglich)",
             checkboxes=[
                 Checkbox(
                     page=3, dx=37, dy=2100, text="hinter dem Ruecken verschraenkt"
@@ -285,7 +287,7 @@ class Bottleneck(Template):
         )
         question13 = Question(
             num=13,
-            questionText="not defined yet",
+            questionText="Hatten Sie den Eindruck, Ihre Arme aktiv zur Stabilisierung einzusetzen?",
             checkboxes=[
                 Checkbox(page=3, dx=37, dy=3495, text="ja, deutlich"),
                 Checkbox(page=3, dx=37, dy=3617, text="eher ja"),
@@ -295,7 +297,7 @@ class Bottleneck(Template):
         )
         question14 = Question(
             num=14,
-            questionText="not defined yet",
+            questionText="WElche Funktion hatte Ihr Armeinsatz aus Ihrer Sicht (Mehrfachnennung moeglich)",
             checkboxes=[
                 Checkbox(page=4, dx=37, dy=452, text="Druck auf Vordermann ausueben"),
                 Checkbox(page=4, dx=37, dy=575, text="Schutz des eigenen Koerpers"),
@@ -321,7 +323,7 @@ class Bottleneck(Template):
         )
         question15 = Question(
             num=15,
-            questionText="not defined yet",
+            questionText="Haben Sie bewusst mit den Armen andere Persnen weggedrueckt?",
             checkboxes=[
                 Checkbox(page=4, dx=37, dy=1611, text="ja, bewusst"),
                 Checkbox(page=4, dx=37, dy=1736, text="teilweise bewusst"),
@@ -331,7 +333,7 @@ class Bottleneck(Template):
         )
         question16 = Question(
             num=16,
-            questionText="not defined yet",
+            questionText="Haben Sie bewusst Ihre Arme als Schutzreaktion eingesetzt, um Raum zu gewinnen?",
             checkboxes=[
                 Checkbox(page=4, dx=37, dy=2513, text="ja, bewusst"),
                 Checkbox(page=4, dx=37, dy=2636, text="teilweise bewusst"),
@@ -341,7 +343,7 @@ class Bottleneck(Template):
         )
         question17 = Question(
             num=17,
-            questionText="not defined yet",
+            questionText="Bitte markieren Sie die Koerperstellen",
             diagramms=[Diagramm(page=5)],
             tables=[
                 CheckTable(
@@ -387,7 +389,7 @@ class Bottleneck(Template):
         )
         question18 = Question(
             num=18,
-            questionText="not defined yet",
+            questionText="Wie erschoepft fuehlen Sie sich nach diesem Durchlauf?",
             checkboxes=[
                 Checkbox(page=6, dx=37, dy=1479, text="ueberhaupt nicht erschoepft"),
                 Checkbox(page=6, dx=37, dy=1601, text="eher nicht erschoepft"),
@@ -398,13 +400,13 @@ class Bottleneck(Template):
         )
         question19 = Question(
             num=19,
-            questionText="not defined yet",
+            questionText="Wie gelangweilt fuehlen Sie sich nach diesem Durchlauf?",
             checkboxes=[
-                Checkbox(page=6, dx=37, dy=2406, text="sehr gut"),
-                Checkbox(page=6, dx=37, dy=2530, text="gut"),
+                Checkbox(page=6, dx=37, dy=2406, text="überhaupt nicht gelangweilt"),
+                Checkbox(page=6, dx=37, dy=2530, text="eher nicht gelangweilt"),
                 Checkbox(page=6, dx=37, dy=2653, text="neutral"),
-                Checkbox(page=6, dx=37, dy=2776, text="eher gering"),
-                Checkbox(page=6, dx=37, dy=2900, text="gering"),
+                Checkbox(page=6, dx=37, dy=2776, text="eher gelangweiligt"),
+                Checkbox(page=6, dx=37, dy=2900, text="sehr gelangweiligt"),
             ],
         )
 

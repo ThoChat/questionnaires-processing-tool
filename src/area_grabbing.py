@@ -294,7 +294,7 @@ def parse_single_data(imgDir, files, template: Template) -> str:
                         "intensity": intensity,
                         "safety":    safety
                     }
-            tableData = [{"name": f"Symbols_Q{question.num}", "data": merged}]
+            tableData = {"name": f"Symbols_Q{question.num}", "data": merged}
 
    
         pathToDiagram = ""
@@ -311,7 +311,7 @@ def parse_single_data(imgDir, files, template: Template) -> str:
         if len(textfieldData) > 0:
             questionData["textFields"] = textfieldData
         if len(tableData) > 0:
-            questionData["tables"] = tableData
+            questionData["table"] = tableData
         if pathToDiagram != "":
             questionData["diagram"] = {"file": pathToDiagram}
         subjectData[str(question.num)] = questionData
