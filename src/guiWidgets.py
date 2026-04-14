@@ -253,7 +253,9 @@ class BoundDiagramWidget(qtWid.QWidget):
             self.json_ref["diagram"]["data"][areaType.name] = selected_shape # store selection
         else:
             self.color_bodyPart(areaType, 5)
-            del self.json_ref["diagram"]["data"][areaType.name] #undo selection
+            # check if entry actually exists
+            if areaType.name in self.json_ref["diagram"]["data"]:
+                del self.json_ref["diagram"]["data"][areaType.name] #undo selection
 
         self.tableChanged.emit() #update other widgets that there was change
 
