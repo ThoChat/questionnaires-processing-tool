@@ -1,3 +1,9 @@
+# MIT License
+# Copyright (c) 2026 Alexandra Mielke & Marvin Lorber
+
+__license__ = "MIT"
+__author__ = ["Alexandra Mielke", "Marvin Lorber"]
+
 import sys
 import os
 from PyQt5 import QtWidgets as qtWid
@@ -8,9 +14,6 @@ import qdarktheme
 from src.survey_templates import GrabExperiment, AnkerPos
 from src.guiWidgets import ImagePage, NoHorizontalScrollArea, QuestionWidget, SnappingScrollBar, SurveyEntryWidget
 from src.guiIO import readData, saveData
-
-__license__ = "MIT"
-__author__ = "Alexandra Mielke"
 
 # ---------------------------
 # Survey Checking Window

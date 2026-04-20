@@ -1,9 +1,11 @@
-from enum import StrEnum, Enum
-from typing import Sequence
+# MIT License
+# Copyright (c) 2026 Marvin Lorber & Alexandra Mielke
 
 __license__ = "MIT"
 __author__ = ["Marvin Lorber", "Alexandra Mielke"]
 
+from enum import StrEnum, Enum
+from typing import Sequence
 
 class ExperimentTypes(StrEnum):
     ROPE = "rope"
@@ -46,7 +48,6 @@ class DiagramAreas(Enum):
 class AnkerPos(Enum):
     X = 645
     Y = 375
-
 
 class Checkbox:
     size_x: int = 60

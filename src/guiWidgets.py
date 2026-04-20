@@ -1,3 +1,9 @@
+# MIT License
+# Copyright (c) 2026 Alexandra Mielke & Marvin Lorber
+
+__license__ = "MIT"
+__author__ = ["Alexandra Mielke", "Marvin Lorber"]
+
 from PyQt5 import QtCore, QtGui
 from PyQt5 import QtWidgets as qtWid
 from PIL import Image
@@ -5,9 +11,6 @@ import numpy as np
 import pickle
 
 from src.survey_templates import DiagramAreas
-
-__license__ = "MIT"
-__author__ = ["Alexandra Mielke", "Marvin Lorber"]
 
 # -------- Helper --------
 

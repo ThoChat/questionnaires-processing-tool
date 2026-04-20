@@ -1,10 +1,13 @@
+# MIT License
+# Copyright (c) 2026 Marvin Lorber
+
+__license__ = "MIT"
+__author__ = "Marvin Lorber"
+
 from PIL import Image
 import os
 import platform
 import pytesseract
-
-__license__ = "MIT"
-__author__ = "Marvin Lorber"
 
 if platform.system() == "Windows":
     # Some additional downloading and setup
@@ -12,7 +15,6 @@ if platform.system() == "Windows":
     pytesseract.pytesseract.tesseract_cmd = (
         r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
     )
-
 
 def ocr(filepath):
     if os.path.isfile(filepath):

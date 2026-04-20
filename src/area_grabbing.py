@@ -1,3 +1,10 @@
+# MIT License
+# Copyright (c) 2026 Marvin Lorber & Alexandra Mielke
+
+__license__ = "MIT"
+__author__ = ["Marvin Lorber", "Alexandra Mielke"]
+
+
 import cv2
 import json
 import numpy as np
@@ -5,9 +12,6 @@ from src.survey_templates import Diagramm, Template, AnkerPos, DiagramAreas
 import glob
 import os
 import pickle
-
-__license__ = "MIT"
-__author__ = ["Marvin Lorber", "Alexandra Mielke"]
 
 dpi = 500
 
