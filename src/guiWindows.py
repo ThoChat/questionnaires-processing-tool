@@ -1,3 +1,9 @@
+# MIT License
+# Copyright (c) 2026 Alexandra Mielke & Marvin Lorber
+
+__license__ = "MIT"
+__author__ = ["Alexandra Mielke", "Marvin Lorber"]
+
 import sys
 import os
 from PyQt5 import QtWidgets as qtWid
@@ -6,16 +12,12 @@ from PyQt5 import QtGui, QtCore
 import qdarktheme
 
 from src.survey_templates import GrabExperiment, AnkerPos
-from src.guiWidgets import ImagePage, QuestionWidget, SurveyEntryWidget
+from src.guiWidgets import ImagePage, NoHorizontalScrollArea, QuestionWidget, SnappingScrollBar, SurveyEntryWidget
 from src.guiIO import readData, saveData
-
-__license__ = "MIT"
-__author__ = "Alexandra Mielke"
 
 # ---------------------------
 # Survey Checking Window
 # ---------------------------
-
 
 class SurveyWindow(qtWid.QWidget):
     # add signal to send out once survey is closed
@@ -31,89 +33,83 @@ class SurveyWindow(qtWid.QWidget):
         # General data handling
         self.dataPath = os.path.join(self.dataDir, "surveyData.json")
         self.data = readData(self.dataPath)
+        self.pages = []
+        self.typeTemplate = typeTemplate
 
         # QT GUI stuff
         self.setWindowTitle(name)
-
         mainLayout = qtWid.QVBoxLayout()
+        self.flag_containersInit = False # we init later, so flag needed
+        screen = QtGui.QGuiApplication.primaryScreen()
+        geometry = screen.availableGeometry() 
+        self.maxWidgetWidth = int(geometry.width() * 0.45)
 
-        doneButton = qtWid.QPushButton("Done")
-        doneButton.clicked.connect(self.done)
-        mainLayout.addWidget(doneButton)
+        # --------------------- BUTTONS AT THE TOP ----------------
+        buttonLayout = qtWid.QHBoxLayout()
 
         noMoreTimeButton = qtWid.QPushButton("Not done yet, but go back")
         noMoreTimeButton.clicked.connect(self.go_back)
-        mainLayout.addWidget(noMoreTimeButton)
+        buttonLayout.addWidget(noMoreTimeButton)
+
+        doneButton = qtWid.QPushButton("Done")
+        doneButton.clicked.connect(self.done)
+        buttonLayout.addWidget(doneButton)
 
         weirdButton = qtWid.QPushButton("Report weird things and go back")
         weirdButton.clicked.connect(self.reportWeirdness)
-        mainLayout.addWidget(weirdButton)
+        buttonLayout.addWidget(weirdButton)
 
-        self.splitter = qtWid.QSplitter()
+        mainLayout.addLayout(buttonLayout)
 
         # Save shortcut
         saveShortcut = qtWid.QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
         saveShortcut.activated.connect(self.save)
 
-        # LEFT SIDE (questions)
-        self.questionScroll = qtWid.QScrollArea()
+        # ------- CONTAINER FOR IMAGES AND QUESTIONS --------------
+        contentLayout = qtWid.QHBoxLayout()
+
+        self.questionContainer = qtWid.QWidget()
+        self.questionLayout = qtWid.QVBoxLayout(self.questionContainer)
+        self.questionLayout.setContentsMargins(0, 0, 0, 0)
+        self.questionLayout.setSpacing(6)
+        self.questionScroll = NoHorizontalScrollArea()
+        self.questionScroll.setWidget(self.questionContainer)
         self.questionScroll.setWidgetResizable(True)
+        self.questionScroll.setSizePolicy(qtWid.QSizePolicy.Preferred, qtWid.QSizePolicy.Expanding)
 
-        questionContainer = qtWid.QWidget()
-        qlayout = qtWid.QVBoxLayout()
-
-        # Example questions
-        self.pages = []
-        self.template = typeTemplate
-
-        self.questions = []
-        questions = typeTemplate.get_questions()
-
-        for q in questions:
-            q_json = self.data[str(q.num)]
-            qw = QuestionWidget(q, q_json)
-            qw.elementFocused.connect(self.highlight_element)
-            self.questions.append(qw)
-            qlayout.addWidget(qw)
-
-        QtCore.QTimer.singleShot(0, self.init_images)
-
-        qlayout.addStretch()
-        questionContainer.setLayout(qlayout)
-
-        self.questionScroll.setWidget(questionContainer)
-
-        # RIGHT SIDE (images)
         self.imageScroll = qtWid.QScrollArea()
         self.imageScroll.setWidgetResizable(True)
 
-        imageContainer = qtWid.QWidget()
-        ilayout = qtWid.QVBoxLayout()
+        self.imageContainer = qtWid.QWidget()
+        self.imageContainer.setSizePolicy(
+            qtWid.QSizePolicy.Expanding,   
+            qtWid.QSizePolicy.Preferred    # do not expand more than vertically available
+        )
+        imageLayout = qtWid.QVBoxLayout(self.imageContainer)
+        imageLayout.addStretch()
+        self.imageScroll.setWidget(self.imageContainer)
 
-        ilayout.addStretch()
-        imageContainer.setLayout(ilayout)
+        # ---- ADD LAYOUTS AND SHOW ----
+        contentLayout.addWidget(self.questionScroll, 1)
+        contentLayout.addWidget(self.imageScroll, 1)
 
-        self.imageScroll.setWidget(imageContainer)
-
-        self.splitter.addWidget(self.questionScroll)
-        self.splitter.addWidget(self.imageScroll)
-
-        mainLayout.addWidget(self.splitter)
-
+        mainLayout.addLayout(contentLayout)
+        self.margins = mainLayout.getContentsMargins()
         self.setLayout(mainLayout)
-
-        # Sync scrollbars
-        self.questionScroll.verticalScrollBar().valueChanged.connect(
-            self.imageScroll.verticalScrollBar().setValue
-        )
-
-        self.imageScroll.verticalScrollBar().valueChanged.connect(
-            self.questionScroll.verticalScrollBar().setValue
-        )
 
         self.showMaximized()
 
-    # Return handling
+    def resizeEvent(self, event):
+        """This is called every time the window is resized, e.g. also when
+        layout is settled after calling showMaximized(), so we use to init content.
+        """
+        super().resizeEvent(event)
+        if not self.flag_containersInit:
+            self.init_questions()
+            self.init_images()
+            self.flag_containersInit = True
+    
+    # ----------- RETURN HANDLING ----------------------------
     def save(self):
         saveData(self.dataPath, self.data)
 
@@ -132,15 +128,44 @@ class SurveyWindow(qtWid.QWidget):
         self.commentWindow.show()
 
     def updateComment(self, comment: str):
-        self.data["comment"] = comment
         self.status = "Needs checking"
+        self.data["comment"] = comment
         self.go_back()
 
     def done(self):
         self.status = "Done"
         self.go_back()
 
-    # image handling
+    # ----------- IMAGE HANDLING ------------------------------
+    def init_images(self):
+        nr_pages = self.typeTemplate.get_num_pages()
+
+        self.pageWidgets = []
+        for i in range(1, nr_pages + 1):
+            path = os.path.join(self.dataDir, f"page-{i:03}.jpg")
+            pix = QtGui.QPixmap(path)
+
+            if i == 1:
+                scale = self.maxWidgetWidth / pix.width()
+
+            pix = pix.scaled(
+                int(pix.width() * scale),
+                int(pix.height() * scale),
+                QtCore.Qt.KeepAspectRatio,
+                QtCore.Qt.SmoothTransformation,
+            )
+
+            page = ImagePage(pix, i)
+            page.scale = scale
+
+            self.pageWidgets.append(page)
+            self.imageScroll.widget().layout().addWidget(page)
+
+        scroll_ticks_right = [int(tick * scale) for tick in self.scroll_ticks_right]
+        self.imageScrollBar = SnappingScrollBar(scroll_ticks_right)
+        self.imageScroll.setVerticalScrollBar(self.imageScrollBar)
+        self.imageScroll.setWidget(self.imageContainer)
+        self.imageScroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
 
     def highlight_element(self, element):
         page = element.page
@@ -181,30 +206,6 @@ class SurveyWindow(qtWid.QWidget):
 
         return heights
 
-    def init_images(self):
-        scales = self.compute_page_scales()
-        nr_pages = self.template.get_num_pages()
-
-        self.pageWidgets = []
-        for i in range(1, nr_pages + 1):
-            path = os.path.join(self.dataDir, f"page-{i:03}.jpg")
-            pix = QtGui.QPixmap(path)
-
-            scale = scales.get(i, 0.3)
-
-            pix = pix.scaled(
-                int(pix.width() * scale),
-                int(pix.height() * scale),
-                QtCore.Qt.KeepAspectRatio,
-                QtCore.Qt.SmoothTransformation,
-            )
-
-            page = ImagePage(pix, i)
-            page.scale = scale
-
-            self.pageWidgets.append(page)
-            self.imageScroll.widget().layout().addWidget(page)
-
     def compute_page_scales(self):
         page_template_heights = {}
         page_gui_heights = {}
@@ -231,7 +232,40 @@ class SurveyWindow(qtWid.QWidget):
         y = page_widget.y() + rect.y()
         scroll.setValue(y - self.imageScroll.height() // 2)
 
-    # Question handling
+    # ----------- QUESTION HANDLING ------------------------------
+    def init_questions(self):
+        # Example questions
+        self.questions = []
+        questions = self.typeTemplate.get_questions()
+
+        scroll_ticks_left = []
+        self.scroll_ticks_right = [] #we need these later for the image
+        bottom_of_last_question = 0
+        for q in questions:
+            current_top = GrabExperiment.get_question_top(q)
+            scroll_ticks_left.append(bottom_of_last_question)
+            self.scroll_ticks_right.append(int(current_top))
+            q_json = self.data[str(q.num)]
+            qw = QuestionWidget(q, q_json, self.maxWidgetWidth)
+            qw.elementFocused.connect(self.highlight_element)
+            self.questions.append(qw)
+            self.questionLayout.addWidget(qw)
+            bottom_of_last_question = bottom_of_last_question + qw.sizeHint().height()
+
+        self.questionLayout.addStretch()
+
+        
+        
+        
+        self.questionScrollBar = SnappingScrollBar(scroll_ticks_left)
+        self.questionScroll.setVerticalScrollBar(self.questionScrollBar)
+
+        self.questionContainer.setLayout(self.questionLayout)
+        self.questionContainer.setSizePolicy(
+            qtWid.QSizePolicy.Expanding,
+            qtWid.QSizePolicy.Maximum
+        )
+        self.questionScroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
 
     def keyPressEvent(self, e):
         if e.key() == QtCore.Qt.Key_Down:
@@ -264,17 +298,9 @@ class SurveyWindow(qtWid.QWidget):
         y = qwidget.y()
         bar.setValue(y - self.questionScroll.height() // 2)
 
-# Center the Splitter on open and window resize
-    def showEvent(self, event):
-        super().showEvent(event)
-
-        total = self.splitter.size().width()
-        self.splitter.setSizes([total // 2, total - total // 2])
-
 # ---------------------------
 # Comment Window
 # ---------------------------
-
 
 # Basic comment input window that returns comment once it's closed
 class CommentWindow(qtWid.QWidget):

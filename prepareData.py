@@ -131,10 +131,12 @@ class pdfConverter():
                     os.mkdir(currDir)
 
             pathToFile = os.path.join(self.tempDir, file_name)
-
-            pageName = f"page-{(surveyPage+1):03}." + self.imgType
-            os.rename(pathToFile, os.path.join(currDir, pageName))
-            files.append(pageName)
+            if os.path.isfile(pathToFile):
+                pageName = f"page-{(surveyPage+1):03}." + self.imgType
+                os.rename(pathToFile, os.path.join(currDir, pageName))
+                files.append(pageName)
+            else:
+                raise RuntimeError(f"Could not find {pathToFile}. Recheck if expected file names are correct!")
 
             surveyPage += 1
             if surveyPage >= nr_pages:

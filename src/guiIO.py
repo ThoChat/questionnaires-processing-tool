@@ -1,3 +1,9 @@
+# MIT License
+# Copyright (c) 2026 Alexandra Mielke
+
+__license__ = "MIT"
+__author__ = "Alexandra Mielke"
+
 import json
 import os
 

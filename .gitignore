@@ -9,7 +9,10 @@ wheels/
 # Virtual environments
 .venv
 
-#Project
+# IDEs
+.vscode
+
+# Project
 data/
 src/outline_figures.pickle
 src/areaMapping.png

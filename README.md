@@ -2,13 +2,13 @@
 
 ## How to run
 
-The project has to main python scripts. One to prepare data for the GUI and the other is the annotation GUI itself.
+The project has two main python scripts. One to prepare data for the GUI and the other is the annotation GUI itself.
 
 ### Prepare data for GUI
 
-Run [prepareData](/prepareData.py) to convert the survey PDFs into image, create metadatafiles and extract survey data. This extraction is needed to parse the data into a format suitable for the GUI. 
+Run [prepareData](/prepareData.py) to convert the survey PDFs into images, create metadatafiles and extract survey data. This extraction is needed to parse the data into a format suitable for the GUI. 
 
-The script requires at least the experiment's directory. It expects a single PDF file in this directory and, optionally, a json metadata file. Should there be several PDFs in the folder, than only the last found pdf is converted. Please be aware that big PDFs will need quite some time to be parsed. If there was no metadata.json when first parsing data, this file will be created. Currently there is no automatic detection of the experiment type, so you have to add this information into `metadata.json`. You should have enough time to do this when the PDFs are parsed. Otherwise you'll run into a run time error, but don't worry, just add the info and run again. The images will be kept and you won't need to wait again.
+The script requires at least the experiment's directory. It expects a single PDF file in this directory and, optionally, a json metadata file. Should there be several PDFs in the folder, than only the last found PDF is converted. Please be aware that big PDFs will need quite some time to be parsed. If there was no metadata.json when first parsing data, this file will be created. Currently there is no automatic detection of the experiment type, so you have to add this information into `metadata.json`. You should have enough time to do this when the PDFs are parsed. Otherwise you'll run into a run time error, but don't worry, just add the info and run again. The images will be kept and you won't need to wait again.
 
 ```metadata.json
 "Experiment": {
@@ -59,16 +59,8 @@ Although this cannot be reversed within the GUI, you can search for the specific
 A comment can be changed within the GUI by going back to the specific survey and going to `Report weird things and go back` again. Here the old comment should show. Deleting it and clicking `Done` should save the empty comment. 
 Alternatively you could go to the specific survey's data.json (surveyData.json) and delete the comment there.
 
-## TODOs
-
-- Table handling 
-  - needs to be added into json when preparing data
-  - Needs to be added in GUI -> [guiWidgets.py](/src/guiWidgets.py)
-- Weird jumping in left side of survey Window when clicking on questions
-- Diagram scales are off, if diagram smaller than 1000
-
 ## Ideas / Questions
 
-- Status currently only in overview metadata of experiment. Could be copied into surveyData.json if wanted. Not suitable to only keep it there though, as sorting all surveyData.json files much slower than just sorting the single metadata.json.
+- Status currently only in overview metadata of experiment. Could be copied into surveyData.json if wanted. Not suitable to only keep it there though, as sorting all surveyData.json files is much slower than just sorting the single metadata.json.
 - Currently GUI only handles a single experiment. There could be another mainWindow which then opens into the current Main Window and shows either "Open" or "Done" status, depending on what is left (e.g, if nr_open_survey >1 ? Open : Done). How to handle "Needs checking" then?
 - Currently the user/data curator has to add the experiment type. This could be detected automatically by reading the first/second/... question (potentially with ocr?)
