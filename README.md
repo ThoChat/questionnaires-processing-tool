@@ -6,9 +6,9 @@ The project has two main python scripts. One to prepare data for the GUI and the
 
 ### Prepare data for GUI
 
-Run [prepareData](/prepareData.py) to convert the survey PDFs into image, create metadatafiles and extract survey data. This extraction is needed to parse the data into a format suitable for the GUI. 
+Run [prepareData](/prepareData.py) to convert the survey PDFs into images, create metadatafiles and extract survey data. This extraction is needed to parse the data into a format suitable for the GUI. 
 
-The script requires at least the experiment's directory. It expects a single PDF file in this directory and, optionally, a json metadata file. Should there be several PDFs in the folder, than only the last found pdf is converted. Please be aware that big PDFs will need quite some time to be parsed. If there was no metadata.json when first parsing data, this file will be created. Currently there is no automatic detection of the experiment type, so you have to add this information into `metadata.json`. You should have enough time to do this when the PDFs are parsed. Otherwise you'll run into a run time error, but don't worry, just add the info and run again. The images will be kept and you won't need to wait again.
+The script requires at least the experiment's directory. It expects a single PDF file in this directory and, optionally, a json metadata file. Should there be several PDFs in the folder, than only the last found PDF is converted. Please be aware that big PDFs will need quite some time to be parsed. If there was no metadata.json when first parsing data, this file will be created. Currently there is no automatic detection of the experiment type, so you have to add this information into `metadata.json`. You should have enough time to do this when the PDFs are parsed. Otherwise you'll run into a run time error, but don't worry, just add the info and run again. The images will be kept and you won't need to wait again.
 
 ```metadata.json
 "Experiment": {
