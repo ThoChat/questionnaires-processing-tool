@@ -1,14 +1,24 @@
 # Annotation GUI for LoStInCrowds
 
+This project was created to digitize the data from scanned paper surveys. It contains two steps, preparation and annotation.
+In the preparation step simple data points like check boxes are automatically evaluated and the data structure gets created.
+The annotation step then provides a GUI with side by side view for manual review, correction, and completion of the survey data.
+
+## Installation
+The project is set up to be managed with uv (https://docs.astral.sh/uv/) and you can install the dependencies with `uv sync`.
+It is also possible to set up without uv by manually installing the dependencies listed in `pyproject.toml`.
+
+On Windows some additional setup is necessary to satisfy all dependencies. Please refer to the installation guides for https://pypi.org/project/pdf2image/ and https://pypi.org/project/pytesseract/#installation.
+
 ## How to run
 
 The project has two main python scripts. One to prepare data for the GUI and the other is the annotation GUI itself.
 
 ### Prepare data for GUI
 
-Run [prepareData](/prepareData.py) to convert the survey PDFs into images, create metadatafiles and extract survey data. This extraction is needed to parse the data into a format suitable for the GUI. 
+Run [prepareData](/prepareData.py) to convert the survey PDF into images, create metadata files and extract survey data. This extraction is needed to parse the data into a format suitable for the GUI. 
 
-The script requires at least the experiment's directory. It expects a single PDF file in this directory and, optionally, a json metadata file. Should there be several PDFs in the folder, than only the last found PDF is converted. Please be aware that big PDFs will need quite some time to be parsed. If there was no metadata.json when first parsing data, this file will be created. Currently there is no automatic detection of the experiment type, so you have to add this information into `metadata.json`. You should have enough time to do this when the PDFs are parsed. Otherwise you'll run into a run time error, but don't worry, just add the info and run again. The images will be kept and you won't need to wait again.
+The script requires at least the experiment's directory. It expects a single PDF file in this directory and, optionally, a json metadata file. Should there be several PDF in the folder, than only the last found PDF is converted. Please be aware that big PDF will need quite some time to be parsed. If there was no metadata.json when first parsing data, this file will be created. Currently there is no automatic detection of the experiment type, so you have to add this information into `metadata.json`. You should have enough time to do this when the PDF are parsed. Otherwise you'll run into a run time error, but don't worry, just add the info and run again. The images will be kept and you won't need to wait again.
 
 ```metadata.json
 "Experiment": {
@@ -45,7 +55,7 @@ To detect single lines of printed writing, use `ocr()` in [ocr.py](/src/ocr.py).
 
 ## License
 
-The entire code is currently under MIT License. Make sure, that when you include code from Stack Overflow or similiar sides to check the license (usually CC-BY-ND and therefore not compatible with MIT). 
+The entire code is currently under MIT License. Make sure, that when you include code from Stack Overflow or similar sides to check the license (usually CC-BY-ND and therefore not compatible with MIT). 
 If you add on to the code and are fine with MIT, just add your copyright notice on top of ours in the [license file](/LICENSE.md) and indicate the new authors on the sides you changed. 
 
 ## FAQ
