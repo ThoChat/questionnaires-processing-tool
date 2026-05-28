@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Marvin Lorber & Alexandra Mielke
 
 __license__ = "MIT"
-__author__ = ["Marvin Lorber", "Alexandra Mielke"]
+__author__ = ["Marvin Lorber", "Alexandra Mielke", "Thomas Chatagnon"]
 
 
 import cv2
@@ -16,12 +16,14 @@ import shutil
 
 dpi = 500
 
+
 class Page:
     def __init__(self, number, img, corners, ids) -> None:
         self.number = number
         self.img = img
         self.corners = corners
         self.ids = ids
+
 
 def getArucoCenters(corners, ids):
     if ids is None:
@@ -38,6 +40,7 @@ def getArucoCenters(corners, ids):
         marker_centers[marker_id] = (cx, cy)
     return marker_centers
 
+
 def warpImage(img, src_pts, dst_pts):
     # Find transformation matrix, so source points are morphed to dst_pts (3×3 homography)
     H, _ = cv2.findHomography(src_pts, dst_pts)
@@ -46,9 +49,18 @@ def warpImage(img, src_pts, dst_pts):
     H_out, W_out, _ = img.shape
     return cv2.warpPerspective(img, H, (W_out, H_out), flags=cv2.INTER_NEAREST)
 
+
 def deskew(img, corners, ids):
     marker_centers = getArucoCenters(corners, ids)
-    
+
+    required = [1, 2, 3, 4]
+    missing = [m for m in required if m not in marker_centers]
+    if missing:
+        raise RuntimeError(
+            f"Page deskew: missing marker IDs {missing}. "
+            "Cannot deskew without all 4 corner markers."
+        )
+
     # Source points (from the current image, in correct corner order)
     src_pts = np.array(
         [
@@ -73,6 +85,7 @@ def deskew(img, corners, ids):
 
     return warpImage(img, src_pts, dst_pts)
 
+
 def non_background_percentage(img) -> float:
     h, w = img.shape[:2]
     total_pixels = h * w
@@ -93,14 +106,16 @@ def non_background_percentage(img) -> float:
 
     return color_percentage
 
+
 # https://www.30secondsofcode.org/python/s/hex-to-rgb/
 # 30secondsofcode 2024
 # CC-BY 4.0
 def rgb_to_hex(color):
-  b = color[0]
-  g = color[1]
-  r = color[2]
-  return ('{:02X}' * 3).format(r, g, b)
+    b = color[0]
+    g = color[1]
+    r = color[2]
+    return ("{:02X}" * 3).format(r, g, b)
+
 
 def extract_diagramm(diagramm: Diagramm, page: Page):
     ids = page.ids.flatten()
@@ -116,6 +131,7 @@ def extract_diagramm(diagramm: Diagramm, page: Page):
         int(top_left_point[1]) : int(bottom_right_point[1]),
         int(top_left_point[0]) : int(bottom_right_point[0]),
     ]
+
 
 def find_diagram_edges(img):
     gray = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
@@ -139,9 +155,10 @@ def find_diagram_edges(img):
     )
     return img_pts
 
+
 def create_diagram_masks(path_to_example_diagram):
     imgTemp = cv2.imread("src/ouline_figures_with_label_patches.png")
-    #src_pts = find_diagram_edges(imgTemp) #not possible, white margin missing
+    # src_pts = find_diagram_edges(imgTemp) #not possible, white margin missing
     src_pts = np.array(
         [
             [162, 162],  # top-left
@@ -151,11 +168,10 @@ def create_diagram_masks(path_to_example_diagram):
         ],
         dtype=np.float32,
     )
-    
 
     exampleImg = cv2.imread(path_to_example_diagram)
     height, width, depth = exampleImg.shape
-    #dst_pts = find_diagram_edges(exampleImg) #not possible, white margin missing
+    # dst_pts = find_diagram_edges(exampleImg) #not possible, white margin missing
     dst_pts = np.array(
         [
             [155, 155],  # top-left
@@ -166,12 +182,14 @@ def create_diagram_masks(path_to_example_diagram):
         dtype=np.float32,
     )
 
-    #scale to same size as scanned image
+    # scale to same size as scanned image
     scaledImg = warpImage(imgTemp, src_pts, dst_pts)
     scaledImg = scaledImg[0:height, 0:width, :]
     if depth != 3:
-        raise RuntimeError(f"Something wrong with the scaled image. Does only have {depth} channels. Expecting 3.")
-    
+        raise RuntimeError(
+            f"Something wrong with the scaled image. Does only have {depth} channels. Expecting 3."
+        )
+
     tempDiagram = Diagramm(page=0)
     areaDict = {}
     areaValues = np.zeros((height, width))
@@ -180,25 +198,26 @@ def create_diagram_masks(path_to_example_diagram):
         area = tempDiagram.imgAreas[key]
         areaDict[area.name] = []
 
-    #loop through pixel in image (probably very unefficient, but easy to understand)
+    # loop through pixel in image (probably very unefficient, but easy to understand)
     x_index = np.array(range(width))
     y_index = np.array(range(height))
     for x in x_index:
         for y in y_index:
-            color = scaledImg[y,x,:]
-            colorHex = '#' + rgb_to_hex(color)
+            color = scaledImg[y, x, :]
+            colorHex = "#" + rgb_to_hex(color)
             if colorHex in tempDiagram.imgAreas:
                 area = tempDiagram.imgAreas[colorHex]
-                areaDict[area.name].append([int(x),int(y)])
+                areaDict[area.name].append([int(x), int(y)])
             else:
                 area = DiagramAreas.SOMETHING_ELSE
-            areaValues[y,x] = area.value
+            areaValues[y, x] = area.value
 
     with open("src/outline_figures.pickle", "wb") as f:
         pickle.dump(areaDict, f)
 
-    img = areaValues.astype('uint8')
+    img = areaValues.astype("uint8")
     cv2.imwrite("src/areaMapping.png", img)
+
 
 def parse_single_data(imgDir, files, template: Template) -> str:
     threshold = 20  # percentage that has to be black for answer to be accepted
@@ -241,10 +260,15 @@ def parse_single_data(imgDir, files, template: Template) -> str:
                 top = int(AnkerPos.Y.value + checkbox.dy)
                 left = int(AnkerPos.X.value + checkbox.dx)
 
-                checkbox_img = pages[checkbox.page].img[top : top + 70, left : left + 60]
+                checkbox_img = pages[checkbox.page].img[
+                    top : top + 70, left : left + 60
+                ]
                 grade = non_background_percentage(checkbox_img)
                 checkboxData.append(
-                    {"text": checkbox.text, "answer": True if grade > threshold else False}
+                    {
+                        "text": checkbox.text,
+                        "answer": True if grade > threshold else False,
+                    }
                 )
                 print(f"Question {question.num}-{checkbox.text}:{grade}")
 
@@ -270,43 +294,55 @@ def parse_single_data(imgDir, files, template: Template) -> str:
                     if row not in table_result:
                         table_result[row] = {}
 
-                    for j, (dx, size_x, column) in enumerate(zip(table.dx, table.size_x, table.columns)):
+                    for j, (dx, size_x, column) in enumerate(
+                        zip(table.dx, table.size_x, table.columns)
+                    ):
                         left = int(AnkerPos.X.value + dx)
                         cell_top = top + i * step_y + 13
                         cell_bottom = top + (i + 1) * step_y - 13
                         cell_img = pages[table.page].img[
                             cell_top:cell_bottom,
-                            left:left + size_x,
+                            left : left + size_x,
                         ]
 
                         grade = non_background_percentage(cell_img)
-                        print(f"Table Q{question.num} row={row} col={column}: {grade:.1f}%")
+                        print(
+                            f"Table Q{question.num} row={row} col={column}: {grade:.1f}%"
+                        )
 
-                        if grade > threshold*0.05:
+                        if grade > threshold * 0.05:
                             table_result[row][column] = True
 
                 if table_result:
-                    tableData.append({
-                        "name": f"Table_{table.page}_{question.num}",
-                        "data": table_result
-                    })
+                    tableData.append(
+                        {
+                            "name": f"Table_{table.page}_{question.num}",
+                            "data": table_result,
+                        }
+                    )
 
             if len(tableData) == 3:
                 merged = {}
                 for symbol in tableData[0]["data"].keys():
-                    freq_cols   = tableData[0]["data"].get(symbol, {})
+                    freq_cols = tableData[0]["data"].get(symbol, {})
                     intens_cols = tableData[1]["data"].get(symbol, {})
                     safety_cols = tableData[2]["data"].get(symbol, {})
 
-                    frequency = next((col for col, checked in freq_cols.items()   if checked), None)
-                    intensity = next((col for col, checked in intens_cols.items() if checked), None)
-                    safety    = next((col for col, checked in safety_cols.items() if checked), None)
+                    frequency = next(
+                        (col for col, checked in freq_cols.items() if checked), None
+                    )
+                    intensity = next(
+                        (col for col, checked in intens_cols.items() if checked), None
+                    )
+                    safety = next(
+                        (col for col, checked in safety_cols.items() if checked), None
+                    )
 
                     if any([frequency, intensity, safety]):
                         merged[symbol] = {
                             "frequency": frequency,
                             "intensity": intensity,
-                            "safety":    safety
+                            "safety": safety,
                         }
                 tableData = {"name": f"Symbols_Q{question.num}", "data": merged}
 
@@ -316,11 +352,15 @@ def parse_single_data(imgDir, files, template: Template) -> str:
             if not deskew_failed:
                 img = extract_diagramm(diagramm, pages[diagramm.page])
                 if img is not None:
-                    pathToDiagram = os.path.join(imgDir, f"question_{question.num}_diagramm.jpg")
+                    pathToDiagram = os.path.join(
+                        imgDir, f"question_{question.num}_diagramm.jpg"
+                    )
                     cv2.imwrite(pathToDiagram, img)
                     diagramExtracted = True
             if not diagramExtracted:
-                pathToDiagram = os.path.join(imgDir, f"question_{question.num}_diagramm.jpg")
+                pathToDiagram = os.path.join(
+                    imgDir, f"question_{question.num}_diagramm.jpg"
+                )
                 shutil.copy(defaultDiagram, pathToDiagram)
 
         questionData = {}

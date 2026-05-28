@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Alexandra Mielke & Marvin Lorber
 
 __license__ = "MIT"
-__author__ = ["Alexandra Mielke", "Marvin Lorber"]
+__author__ = ["Alexandra Mielke", "Marvin Lorber", "Thomas Chatagnon"]
 
 from PyQt5 import QtCore, QtGui
 from PyQt5 import QtWidgets as qtWid
@@ -15,6 +15,7 @@ from src.survey_templates import DiagramAreas
 
 # -------- Helper --------
 
+
 def status_color(status):
     if status == "Done":
         return "green"
@@ -22,7 +23,8 @@ def status_color(status):
         return "gold"
     return "grey"
 
-def imgIcon_color(id:int):
+
+def imgIcon_color(id: int):
     if id == 0:
         return QtGui.QColor(43, 29, 90, 255)
     elif id == 1:
@@ -32,11 +34,12 @@ def imgIcon_color(id:int):
     elif id == 3:
         return QtGui.QColor(142, 204, 185, 255)
     elif id == 4:
-        return QtGui.QColor(85,156,158,255)
+        return QtGui.QColor(85, 156, 158, 255)
     elif id == 5:
-        return QtGui.QColor(255,255,255,255) #white
+        return QtGui.QColor(255, 255, 255, 255)  # white
     else:
-        return QtGui.QColor(100,100,100,255) #gray
+        return QtGui.QColor(100, 100, 100, 255)  # gray
+
 
 # ---------------------------
 # JSON binding
@@ -60,11 +63,11 @@ class ImagePage(qtWid.QLabel):
     def __init__(self, pixmap, page_index):
         super().__init__()
         self.setSizePolicy(
-            qtWid.QSizePolicy.Ignored,   # ignore sizeHint and just use available space
-            qtWid.QSizePolicy.Maximum    # do not expand more than defined in sizeHint
+            qtWid.QSizePolicy.Ignored,  # ignore sizeHint and just use available space
+            qtWid.QSizePolicy.Maximum,  # do not expand more than defined in sizeHint
         )
         self.setSizePolicy(qtWid.QSizePolicy.Expanding, qtWid.QSizePolicy.Preferred)
-        #print(f"Image Page size {self.width()}, {self.height()}.")
+        # print(f"Image Page size {self.width()}, {self.height()}.")
         self.setPixmap(pixmap)
         self.page_index = page_index
         self.highlight_rect = None
@@ -82,6 +85,7 @@ class ImagePage(qtWid.QLabel):
             pen.setWidth(4)
             painter.setPen(pen)
             painter.drawRect(self.highlight_rect)
+
 
 # ---------------------------
 # Focus Widgets
@@ -139,25 +143,25 @@ class BoundTextEdit(qtWid.QTextEdit):
         self.focused.emit(self.template)
         super().focusInEvent(e)
 
+
 class ClickableImageLabel(qtWid.QLabel):
     clicked = QtCore.pyqtSignal(int, int, bool)
 
     def mousePressEvent(self, event):
         if self.pixmap() is None:
             return
-        
+
         if event.button() == QtCore.Qt.LeftButton:
             self.clicked.emit(event.x(), event.y(), True)
         elif event.button() == QtCore.Qt.RightButton:
             self.clicked.emit(event.x(), event.y(), False)
-        
-        
+
 
 class BoundDiagramWidget(qtWid.QWidget):
     focused = QtCore.pyqtSignal(object)
     tableChanged = QtCore.pyqtSignal()
 
-    def __init__(self, template, json_ref, labels, maxWidth:int):
+    def __init__(self, template, json_ref, labels, maxWidth: int):
         super().__init__()
 
         self.template = template
@@ -166,7 +170,7 @@ class BoundDiagramWidget(qtWid.QWidget):
 
         areaMapping = Image.open("src/areaMapping.png")
         self.areaMapping = np.array(areaMapping)
-        with open("src/outline_figures.pickle", 'rb') as f:
+        with open("src/outline_figures.pickle", "rb") as f:
             self.areaDict = pickle.load(f)
         self.value_to_area = {member.value: member for member in DiagramAreas}
 
@@ -187,7 +191,7 @@ class BoundDiagramWidget(qtWid.QWidget):
             self.buttons[text] = rb
 
         layout.addLayout(radio_layout)
-        
+
         self.button_group.buttonClicked.connect(self.set_curr_symbol)
 
         # --- Image Stack ---
@@ -205,9 +209,9 @@ class BoundDiagramWidget(qtWid.QWidget):
         # scale to a fixed target size (e.g. nearly half of the screen)
         scaled = pixmap.scaled(
             maxWidth,
-            int((template.dy/template.dx) * maxWidth),
+            int((template.dy / template.dx) * maxWidth),
             QtCore.Qt.KeepAspectRatio,
-            QtCore.Qt.SmoothTransformation
+            QtCore.Qt.SmoothTransformation,
         )
 
         self.scaled_pixmap = scaled
@@ -222,70 +226,77 @@ class BoundDiagramWidget(qtWid.QWidget):
         # click handling
         self.image_label.clicked.connect(self.handle_click)
 
-        #load old data
+        # load old data
         if "data" in self.json_ref["diagram"]:
             for bodypart in self.json_ref["diagram"]["data"]:
-                #match bodypart with DiagramAreas
+                # match bodypart with DiagramAreas
                 areaType = DiagramAreas[bodypart]
 
-                #match selected shape with label number
+                # match selected shape with label number
                 selected_shape = self.json_ref["diagram"]["data"][bodypart]
                 try:
                     shape_id = self.labels.index(selected_shape)
                     self.color_bodyPart(areaType, shape_id)
                 except:
-                    pass  
+                    pass
         else:
             self.json_ref["diagram"]["data"] = {}
 
     def set_curr_symbol(self, button):
         self.selected_id = self.button_group.checkedId()
 
-    def handle_click(self, px, py, leftButton:bool):
+    def handle_click(self, px, py, leftButton: bool):
         selected_id = self.button_group.checkedId()
         if selected_id == -1:
             return
-                
+
         # check which body part we clicked on
-        imgVal = self.areaMapping[int(py*self.scale_y), int(px*self.scale_x)]
+        imgVal = self.areaMapping[int(py * self.scale_y), int(px * self.scale_x)]
         areaType = self.value_to_area.get(imgVal)
         if not areaType or areaType == DiagramAreas.SOMETHING_ELSE:
             # no body area, do nothing
             return
-        
-        #clicked on something meaningful
+
+        # clicked on something meaningful
         selected_shape = self.labels[selected_id]
         if leftButton:
             self.color_bodyPart(areaType, selected_id)
-            self.json_ref["diagram"]["data"][areaType.name] = selected_shape # store selection
+            self.json_ref["diagram"]["data"][
+                areaType.name
+            ] = selected_shape  # store selection
         else:
             self.color_bodyPart(areaType, 5)
             # check if entry actually exists
             if areaType.name in self.json_ref["diagram"]["data"]:
-                del self.json_ref["diagram"]["data"][areaType.name] #undo selection
+                del self.json_ref["diagram"]["data"][areaType.name]  # undo selection
 
-        self.tableChanged.emit() #update other widgets that there was change
+        self.tableChanged.emit()  # update other widgets that there was change
 
-    def color_bodyPart(self, areaType:DiagramAreas, shape_id:int):
+    def color_bodyPart(self, areaType: DiagramAreas, shape_id: int):
         color = imgIcon_color(shape_id)
-        imgPos = np.divide(np.array(self.areaDict[areaType.name]), [self.scale_x, self.scale_y])
+        imgPos = np.divide(
+            np.array(self.areaDict[areaType.name]), [self.scale_x, self.scale_y]
+        )
         coords = imgPos.astype(np.uint16)
 
         image = self.scaled_pixmap.toImage()
         ptr = image.bits()
         ptr.setsize(image.byteCount())
 
-        arr = np.frombuffer(ptr, np.uint8).reshape(
-            (image.height(), image.width(), 4)
-        )
-            
+        arr = np.frombuffer(ptr, np.uint8).reshape((image.height(), image.width(), 4))
+
         coords[:, 0] = np.clip(coords[:, 0], 0, image.width() - 1)
         coords[:, 1] = np.clip(coords[:, 1], 0, image.height() - 1)
-        arr[coords[:, 1], coords[:, 0]] = [color.red(), color.green(), color.blue(), color.alpha()]
+        arr[coords[:, 1], coords[:, 0]] = [
+            color.red(),
+            color.green(),
+            color.blue(),
+            color.alpha(),
+        ]
 
         self.scaled_pixmap = QtGui.QPixmap.fromImage(image)
-        self.image_label.setPixmap(self.scaled_pixmap)    
-        
+        self.image_label.setPixmap(self.scaled_pixmap)
+
     def focusInEvent(self, e):
         self.focused.emit(self.template)
         super().focusInEvent(e)
@@ -360,7 +371,7 @@ class BoundTableWidget(qtWid.QFrame):
                 values = [
                     data.get("frequency"),
                     data.get("intensity"),
-                    data.get("safety")
+                    data.get("safety"),
                 ]
 
                 for combo, value in zip(combos, values):
@@ -378,10 +389,17 @@ class BoundTableWidget(qtWid.QFrame):
             def make_callback(bp, cbs):
                 def callback():
                     self.json_ref["data"][bp] = {
-                        "frequency": cbs[0].currentText() if cbs[0].currentIndex() != 0 else "",
-                        "intensity": cbs[1].currentText() if cbs[1].currentIndex() != 0 else "",
-                        "safety": cbs[2].currentText() if cbs[2].currentIndex() != 0 else ""
+                        "frequency": (
+                            cbs[0].currentText() if cbs[0].currentIndex() != 0 else ""
+                        ),
+                        "intensity": (
+                            cbs[1].currentText() if cbs[1].currentIndex() != 0 else ""
+                        ),
+                        "safety": (
+                            cbs[2].currentText() if cbs[2].currentIndex() != 0 else ""
+                        ),
                     }
+
                 return callback
 
             cb = make_callback(bodypart, combos)
@@ -401,12 +419,12 @@ class BoundTableWidget(qtWid.QFrame):
 class QuestionWidget(qtWid.QFrame):
     elementFocused = QtCore.pyqtSignal(object)
 
-    def __init__(self, question_template, question_json, maxWidgetWidth:int):
+    def __init__(self, question_template, question_json, maxWidgetWidth: int):
         super().__init__()
 
         self.setSizePolicy(
-            qtWid.QSizePolicy.Ignored,   # ignore sizeHint and just use available space
-            qtWid.QSizePolicy.Maximum    # do not expand more than vertically available
+            qtWid.QSizePolicy.Ignored,  # ignore sizeHint and just use available space
+            qtWid.QSizePolicy.Maximum,  # do not expand more than vertically available
         )
 
         self.qnum = question_template.num
@@ -444,18 +462,22 @@ class QuestionWidget(qtWid.QFrame):
 
         # diagram
         if ("diagram" in question_json) and ("table" in question_json):
-            wDiagram = BoundDiagramWidget(question_template.diagramms[0], question_json, 
-                                   question_template.tables[0].rows, maxWidgetWidth)
+            wDiagram = BoundDiagramWidget(
+                question_template.diagramms[0],
+                question_json,
+                question_template.tables[0].rows,
+                maxWidgetWidth,
+            )
             wDiagram.focused.connect(self.elementFocused)
             layout.addWidget(wDiagram)
             elements.append(question_template.diagramms[0])
 
             # we create single table and do not focus, as mapping 3 tables in template to 1 in GUI impossible
             wTable = BoundTableWidget(question_template, question_json)
-            #wTable.focused.connect(self.elementFocused) #Don't focus, so there is no unnecessary jumping
+            # wTable.focused.connect(self.elementFocused) #Don't focus, so there is no unnecessary jumping
             wDiagram.tableChanged.connect(wTable.update_table)
             layout.addWidget(wTable)
-            #elements.append(table_template)
+            # elements.append(table_template)
 
         self.setLayout(layout)
 
@@ -466,8 +488,7 @@ class QuestionWidget(qtWid.QFrame):
             raise RuntimeError("No known elements found on page.")
 
         self.template_top = min(e.dy for e in elements)
-        self.template_bottom = max(
-            e.dy + getattr(e, "size_y", 70) for e in elements)
+        self.template_bottom = max(e.dy + getattr(e, "size_y", 70) for e in elements)
 
     def sizeHint(self):
         return super().sizeHint()
@@ -504,6 +525,7 @@ class SurveyEntryWidget(qtWid.QFrame):
     def mousePressEvent(self, event):
         self.clicked.emit(self.name)
 
+
 # ---------------------------
 # Scroll Bar Widget
 # ---------------------------
@@ -516,28 +538,30 @@ class SnappingScrollBar(qtWid.QScrollBar):
         self.sliderReleased.connect(self.snapToNearest)
         self.index = 0
         self.toSync = []
-    
+
     def snapToNearest(self, value=None):
         if value is None:
             value = self.value()
         self.setValue(value)
 
     def setValue(self, value):
-        closest_idx = min(range(len(self.fixed_positions)),
-                          key=lambda i: abs(self.fixed_positions[i] - value))
+        closest_idx = min(
+            range(len(self.fixed_positions)),
+            key=lambda i: abs(self.fixed_positions[i] - value),
+        )
         super().setValue(self.fixed_positions[closest_idx])
         if self.index != closest_idx:
             self.index = closest_idx
             for other in self.toSync:
                 other.snapToIndex(closest_idx)
-    
+
     def snapToIndex(self, index):
         if index < len(self.fixed_positions):
             self.setValue(self.fixed_positions[index])
-    
+
     def addSync(self, other):
         self.toSync.append(other)
-    
+
 
 # ---------------------------
 # Scroll area hack
@@ -548,7 +572,7 @@ class NoHorizontalScrollArea(qtWid.QScrollArea):
         if childWidget:
             pos = childWidget.mapTo(self.widget(), QtCore.QPoint(0, 0))
             self.verticalScrollBar().setValue(pos.y())
-    
+
     def focusNextPrevChild(self, next):
         hbar = self.horizontalScrollBar()
         old = hbar.value()
