@@ -104,6 +104,7 @@ class BoundCheckBox(qtWid.QCheckBox):
         self.setChecked(json_ref["answer"])
 
         self.stateChanged.connect(self.write_json)
+        self.clicked.connect(lambda: self.focused.emit(self.template))
 
     def write_json(self, state):
         self.json_ref["answer"] = bool(state)
