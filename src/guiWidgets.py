@@ -310,7 +310,7 @@ class BoundTableWidget(qtWid.QFrame):
         self.json_ref = json_ref
         self.labels = template.tables[0].rows
 
-        self.json_ref.setdefault("data", {})
+        self.json_ref["table"].setdefault("data", {})
 
         self.layout = qtWid.QGridLayout(self)
 
@@ -364,7 +364,7 @@ class BoundTableWidget(qtWid.QFrame):
                 self.layout.addWidget(combo, row_index, col_index + 1)
 
             # ---- LOAD EXISTING DATA ----
-            data = self.json_ref.get("data", {}).get(bodypart, {})
+            data = self.json_ref["table"]["data"].get(selected_shape, {})
 
             values = [
                 data.get("frequency"),
@@ -379,9 +379,9 @@ class BoundTableWidget(qtWid.QFrame):
                     combo.setCurrentIndex(0)  # "-- select --"
 
             # ---- SAVE CALLBACK ----
-            def make_callback(bp, cbs):
+            def make_callback(shape, cbs):
                 def callback():
-                    self.json_ref["data"][bp] = {
+                    self.json_ref["table"]["data"][shape] = {
                         "frequency": (
                             cbs[0].currentText() if cbs[0].currentIndex() != 0 else ""
                         ),
@@ -392,16 +392,14 @@ class BoundTableWidget(qtWid.QFrame):
                             cbs[2].currentText() if cbs[2].currentIndex() != 0 else ""
                         ),
                     }
+                    self.update_table()
 
                 return callback
 
-            cb = make_callback(bodypart, combos)
+            cb = make_callback(selected_shape, combos)
 
             for combo in combos:
                 combo.currentIndexChanged.connect(cb)
-
-            # initialize data immediately
-            cb()
 
 
 # ---------------------------
