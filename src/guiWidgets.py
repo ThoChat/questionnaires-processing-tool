@@ -8,6 +8,7 @@ from PyQt5 import QtCore, QtGui
 from PyQt5 import QtWidgets as qtWid
 from PIL import Image
 import numpy as np
+import os
 import pickle
 
 from src.survey_templates import DiagramAreas
@@ -196,7 +197,10 @@ class BoundDiagramWidget(qtWid.QWidget):
 
         self.image_label = ClickableImageLabel()
 
-        pixmap = QtGui.QPixmap(json_ref["diagram"]["file"])
+        imgPath = json_ref["diagram"]["file"]
+        if not imgPath or not os.path.isfile(imgPath):
+            imgPath = "src/DefaultMapping.png"
+        pixmap = QtGui.QPixmap(imgPath)
 
         # scale to a fixed target size (e.g. nearly half of the screen)
         scaled = pixmap.scaled(

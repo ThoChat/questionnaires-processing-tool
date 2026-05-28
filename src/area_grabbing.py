@@ -12,6 +12,7 @@ from src.survey_templates import Diagramm, Template, AnkerPos, DiagramAreas
 import glob
 import os
 import pickle
+import shutil
 
 dpi = 500
 
@@ -104,6 +105,9 @@ def rgb_to_hex(color):
 def extract_diagramm(diagramm: Diagramm, page: Page):
     ids = page.ids.flatten()
     corners = dict(zip(ids, page.corners))
+    missing = [cid for cid in diagramm.corner_ids if cid not in corners]
+    if missing:
+        return None
     top_left_corner = corners[diagramm.corner_ids[0]]
     top_left_point = top_left_corner[0][0]
     bottom_right_corner = corners[diagramm.corner_ids[3]]
@@ -198,23 +202,26 @@ def create_diagram_masks(path_to_example_diagram):
 
 def parse_single_data(imgDir, files, template: Template) -> str:
     threshold = 20  # percentage that has to be black for answer to be accepted
+    defaultDiagram = "src/DefaultMapping.png"
     pages = {}
+    deskew_failed = False
     for fp in files:
         page_nr = int(fp[-5])
         img = cv2.imread(os.path.join(imgDir, fp))
-        # Convert the image to grayscale
         gray = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
         aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
         parameters = cv2.aruco.DetectorParameters()
 
-        # Create the ArUco detector
         detector = cv2.aruco.ArucoDetector(aruco_dict, parameters)
-        # Detect the markers
         corners, ids, _ = detector.detectMarkers(gray)
 
-        img = deskew(img, corners, ids)
+        try:
+            img = deskew(img, corners, ids)
+        except RuntimeError:
+            deskew_failed = True
+            print(f"  Warning: No ArUco markers on page {page_nr}, skipping deskew")
+            break
 
-        # redetect markers after transformation
         gray = cv2.cvtColor(src=img, code=cv2.COLOR_BGR2GRAY)
         corners, ids, _ = detector.detectMarkers(gray)
 
@@ -226,93 +233,96 @@ def parse_single_data(imgDir, files, template: Template) -> str:
 
     for question in template.get_questions():
         checkboxData = []
-        for checkbox in question.checkboxes:
-            top = int(AnkerPos.Y.value + checkbox.dy)
-            left = int(AnkerPos.X.value + checkbox.dx)
-
-            checkbox_img = pages[checkbox.page].img[top : top + 70, left : left + 60]
-            grade = non_background_percentage(checkbox_img)
-            checkboxData.append(
-                {"text": checkbox.text, "answer": True if grade > threshold else False}
-            )
-            print(f"Question {question.num}-{checkbox.text}:{grade}")
-
         textfieldData = []
-        for textfield in question.texts:
-            top = int(AnkerPos.Y.value + textfield.dy)
-            left = int(AnkerPos.X.value + textfield.dx)
-
-            filePath = f"{imgDir}/question_{question.num}_freeText.jpg"
-            cv2.imwrite(
-                filePath,
-                pages[textfield.page].img[
-                    top : top + textfield.size_y, left : left + textfield.size_x, :
-                ],
-            )
-            textfieldData.append({"text": "", "file": filePath})
-
         tableData = []
-        for table in question.tables:
-            top = int(AnkerPos.Y.value + table.dy)
-            step_y = int(table.size_y / len(table.rows))
-            table_result = {}
 
-            for i, row in enumerate(table.rows):
-                if row not in table_result:
-                    table_result[row] = {}
+        if not deskew_failed:
+            for checkbox in question.checkboxes:
+                top = int(AnkerPos.Y.value + checkbox.dy)
+                left = int(AnkerPos.X.value + checkbox.dx)
 
-                for j, (dx, size_x, column) in enumerate(zip(table.dx, table.size_x, table.columns)):
-                    left = int(AnkerPos.X.value + dx)
-                    cell_top = top + i * step_y + 13
-                    cell_bottom = top + (i + 1) * step_y - 13
-                    cell_img = pages[table.page].img[
-                        cell_top:cell_bottom,
-                        left:left + size_x,
-                    ]
+                checkbox_img = pages[checkbox.page].img[top : top + 70, left : left + 60]
+                grade = non_background_percentage(checkbox_img)
+                checkboxData.append(
+                    {"text": checkbox.text, "answer": True if grade > threshold else False}
+                )
+                print(f"Question {question.num}-{checkbox.text}:{grade}")
 
+            for textfield in question.texts:
+                top = int(AnkerPos.Y.value + textfield.dy)
+                left = int(AnkerPos.X.value + textfield.dx)
 
-                    grade = non_background_percentage(cell_img)
-                    print(f"Table Q{question.num} row={row} col={column}: {grade:.1f}%")
+                filePath = f"{imgDir}/question_{question.num}_freeText.jpg"
+                cv2.imwrite(
+                    filePath,
+                    pages[textfield.page].img[
+                        top : top + textfield.size_y, left : left + textfield.size_x, :
+                    ],
+                )
+                textfieldData.append({"text": "", "file": filePath})
 
+            for table in question.tables:
+                top = int(AnkerPos.Y.value + table.dy)
+                step_y = int(table.size_y / len(table.rows))
+                table_result = {}
 
-                    if grade > threshold*0.05:
-                        table_result[row][column] = True
+                for i, row in enumerate(table.rows):
+                    if row not in table_result:
+                        table_result[row] = {}
 
-            if table_result:
-                tableData.append({
-                    "name": f"Table_{table.page}_{question.num}",
-                    "data": table_result
-                })
+                    for j, (dx, size_x, column) in enumerate(zip(table.dx, table.size_x, table.columns)):
+                        left = int(AnkerPos.X.value + dx)
+                        cell_top = top + i * step_y + 13
+                        cell_bottom = top + (i + 1) * step_y - 13
+                        cell_img = pages[table.page].img[
+                            cell_top:cell_bottom,
+                            left:left + size_x,
+                        ]
 
+                        grade = non_background_percentage(cell_img)
+                        print(f"Table Q{question.num} row={row} col={column}: {grade:.1f}%")
 
-        # Merge only if there are three sutables
-        if len(tableData) == 3:
-            merged = {}
-            for symbol in tableData[0]["data"].keys():
-                freq_cols   = tableData[0]["data"].get(symbol, {})
-                intens_cols = tableData[1]["data"].get(symbol, {})
-                safety_cols = tableData[2]["data"].get(symbol, {})
+                        if grade > threshold*0.05:
+                            table_result[row][column] = True
 
-                frequency = next((col for col, checked in freq_cols.items()   if checked), None)
-                intensity = next((col for col, checked in intens_cols.items() if checked), None)
-                safety    = next((col for col, checked in safety_cols.items() if checked), None)
+                if table_result:
+                    tableData.append({
+                        "name": f"Table_{table.page}_{question.num}",
+                        "data": table_result
+                    })
 
-                if any([frequency, intensity, safety]):
-                    merged[symbol] = {
-                        "frequency": frequency,
-                        "intensity": intensity,
-                        "safety":    safety
-                    }
-            tableData = {"name": f"Symbols_Q{question.num}", "data": merged}
+            if len(tableData) == 3:
+                merged = {}
+                for symbol in tableData[0]["data"].keys():
+                    freq_cols   = tableData[0]["data"].get(symbol, {})
+                    intens_cols = tableData[1]["data"].get(symbol, {})
+                    safety_cols = tableData[2]["data"].get(symbol, {})
 
-   
+                    frequency = next((col for col, checked in freq_cols.items()   if checked), None)
+                    intensity = next((col for col, checked in intens_cols.items() if checked), None)
+                    safety    = next((col for col, checked in safety_cols.items() if checked), None)
+
+                    if any([frequency, intensity, safety]):
+                        merged[symbol] = {
+                            "frequency": frequency,
+                            "intensity": intensity,
+                            "safety":    safety
+                        }
+                tableData = {"name": f"Symbols_Q{question.num}", "data": merged}
+
         pathToDiagram = ""
         for diagramm in question.diagramms:
-            img = extract_diagramm(diagramm, pages[diagramm.page])
-            pathToDiagram = os.path.join(imgDir, f"question_{question.num}_diagramm.jpg")
-            cv2.imwrite(pathToDiagram, img)
+            diagramExtracted = False
+            if not deskew_failed:
+                img = extract_diagramm(diagramm, pages[diagramm.page])
+                if img is not None:
+                    pathToDiagram = os.path.join(imgDir, f"question_{question.num}_diagramm.jpg")
+                    cv2.imwrite(pathToDiagram, img)
+                    diagramExtracted = True
+            if not diagramExtracted:
+                pathToDiagram = os.path.join(imgDir, f"question_{question.num}_diagramm.jpg")
+                shutil.copy(defaultDiagram, pathToDiagram)
 
-   
         questionData = {}
         questionData["question"] = question.questionText
         if len(checkboxData) > 0:
@@ -321,14 +331,15 @@ def parse_single_data(imgDir, files, template: Template) -> str:
             questionData["textFields"] = textfieldData
         if len(tableData) > 0:
             questionData["table"] = tableData
-        if pathToDiagram != "":
-            questionData["diagram"] = {"file": pathToDiagram}
+        elif len(question.tables) > 0:
+            questionData["table"] = {"name": "", "data": {}}
+        questionData["diagram"] = {"file": pathToDiagram}
         subjectData[str(question.num)] = questionData
 
-
-    for key, value in pages.items():
-        imgFileName = f"page-00{key}.jpg"
-        cv2.imwrite(os.path.join(imgDir, imgFileName), value.img)
+    if not deskew_failed:
+        for key, value in pages.items():
+            imgFileName = f"page-00{key}.jpg"
+            cv2.imwrite(os.path.join(imgDir, imgFileName), value.img)
 
     dataFileName = "surveyData.json"
     with open(os.path.join(imgDir, dataFileName), "w") as f:
