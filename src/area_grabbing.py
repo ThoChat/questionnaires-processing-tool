@@ -264,12 +264,21 @@ def parse_single_data(imgDir, files, template: Template) -> str:
                     top : top + 70, left : left + 60
                 ]
                 grade = non_background_percentage(checkbox_img)
+                checked = grade > threshold
                 checkboxData.append(
                     {
                         "text": checkbox.text,
-                        "answer": True if grade > threshold else False,
+                        "answer": checked,
                     }
                 )
+                if checked:
+                    cv2.rectangle(
+                        pages[checkbox.page].img,
+                        (left, top),
+                        (left + 60, top + 70),
+                        color=(0, 0, 255),
+                        thickness=6,
+                    )
                 print(f"Question {question.num}-{checkbox.text}:{grade}")
 
             for textfield in question.texts:
