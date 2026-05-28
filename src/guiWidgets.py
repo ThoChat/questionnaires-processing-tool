@@ -310,6 +310,8 @@ class BoundTableWidget(qtWid.QFrame):
         self.json_ref = json_ref
         self.labels = template.tables[0].rows
 
+        self.json_ref.setdefault("data", {})
+
         self.layout = qtWid.QGridLayout(self)
 
         # ---- HEADER ----
@@ -335,9 +337,6 @@ class BoundTableWidget(qtWid.QFrame):
                 if widget:
                     widget.deleteLater()
                 self.layout.removeItem(item)
-
-        # ---- RESET DATA ----
-        self.json_ref["data"] = {}
 
         if "data" not in self.json_ref["diagram"]:
             return
@@ -365,25 +364,19 @@ class BoundTableWidget(qtWid.QFrame):
                 self.layout.addWidget(combo, row_index, col_index + 1)
 
             # ---- LOAD EXISTING DATA ----
-            if selected_shape in self.json_ref["table"]["data"]:
-                data = self.json_ref["table"]["data"][selected_shape]
+            data = self.json_ref.get("data", {}).get(bodypart, {})
 
-                values = [
-                    data.get("frequency"),
-                    data.get("intensity"),
-                    data.get("safety"),
-                ]
+            values = [
+                data.get("frequency"),
+                data.get("intensity"),
+                data.get("safety"),
+            ]
 
-                for combo, value in zip(combos, values):
-                    if value and combo.findText(value) != -1:
-                        combo.setCurrentText(value)
-                    else:
-                        combo.setCurrentIndex(0)  # "-- select --"
-
-            else:
-                # default to placeholder
-                for combo in combos:
-                    combo.setCurrentIndex(0)
+            for combo, value in zip(combos, values):
+                if value and combo.findText(value) != -1:
+                    combo.setCurrentText(value)
+                else:
+                    combo.setCurrentIndex(0)  # "-- select --"
 
             # ---- SAVE CALLBACK ----
             def make_callback(bp, cbs):
