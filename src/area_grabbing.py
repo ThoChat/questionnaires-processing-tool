@@ -23,6 +23,11 @@ class Page:
         self.ids = ids
 
 def getArucoCenters(corners, ids):
+    if ids is None:
+        raise RuntimeError(
+            "No ArUco markers detected on page. "
+            "The scan may be missing the marker tags, or the image is corrupt."
+        )
     ids = ids.flatten()
     marker_centers = {}
     for marker_corners, marker_id in zip(corners, ids):
@@ -307,7 +312,7 @@ def parse_single_data(imgDir, files, template: Template) -> str:
             pathToDiagram = os.path.join(imgDir, f"question_{question.num}_diagramm.jpg")
             cv2.imwrite(pathToDiagram, img)
 
-  
+   
         questionData = {}
         questionData["question"] = question.questionText
         if len(checkboxData) > 0:
@@ -402,7 +407,8 @@ def mark_target_areas(path_in: str, template: Template):
                     print(f"{row}-{column}-{grade}")
         for diagramm in question.diagramms:
             img = extract_diagramm(diagramm, pages[diagramm.page])
-            cv2.imwrite(f"{path_in}/question_{question.num}_diagramm.jpg", img)
+            if img is not None:
+                cv2.imwrite(f"{path_in}/question_{question.num}_diagramm.jpg", img)
 
     for key, value in pages.items():
         cv2.imwrite(f"{path_in}/page_00{key}_detected.jpg", value.img)

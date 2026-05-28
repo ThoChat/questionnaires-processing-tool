@@ -1,4 +1,4 @@
-"""This script prepares data for annotation and verification in the GUI. 
+"""This script prepares data for annotation and verification in the GUI.
 
 Expected input: File directory with PDFs. Each PDFs has several surveys of the same type appended after each other.
 Output:
@@ -15,18 +15,17 @@ Output:
     |   |-surveyResponse_<nr>
     |   |   |...
     |   |...
-    
+
 Copyright: Marvin Lorber, Alexandra Mielke 2026
 License: MIT
 """
 
-#----- pip imports
+# ----- pip imports
 import argparse
 import json
 import os.path
 from pathlib import Path
 import platform
-import warnings
 
 from pdf2image import convert_from_path
 
@@ -35,11 +34,12 @@ if platform.system() == "Windows":
     # Check installation guide for pdf2image: https://pypi.org/project/pdf2image/
     path_to_poppler_exe = Path(r"C:/poppler/poppler-25.12.0/Library\bin")
 
-#----- project includes
+# ----- project includes
 from src.survey_templates import GrabExperiment, ExperimentTypes
 from src import area_grabbing
-    
-class pdfConverter():    
+
+
+class pdfConverter:
     def __init__(self, mainDir, metadataFile):
         self.mainDir = mainDir
         self.tempDir = os.path.join(self.mainDir, "temp")
@@ -47,16 +47,13 @@ class pdfConverter():
 
         self.imgType = "jpg"
 
-        #check for metadata, if not there create default file
+        # check for metadata, if not there create default file
         if not self._readMetadata():
             self.metadata = {
-                "Experiment": {
-                    "Type": "unknown",
-                    "Name": ""
-                },
+                "Experiment": {"Type": "unknown", "Name": ""},
                 "Description": "",
                 "Date": "",
-                "Comment": ""
+                "Comment": "",
             }
             self._saveMetadata()
 
@@ -74,38 +71,50 @@ class pdfConverter():
 
     def _page_name_generator(self):
         while True:
-            yield "page" #return value, but continue
+            yield "page"  # return value, but continue
 
-    def convert_pages(self, path_to_pdf:str):
+    def convert_pages(self, path_to_pdf: str):
         if os.path.isdir(self.tempDir):
             print("Found /temp. Assuming PDF(s) already converted.")
-            return 
+            return
         os.mkdir(self.tempDir)
         print(f"Converting {path_to_pdf} to images ... ")
         pdf_file = Path(path_to_pdf)
         if platform.system() == "Windows":
-            convert_from_path(pdf_file, fmt=self.imgType, dpi=area_grabbing.dpi, 
-                                          output_folder=self.tempDir, paths_only=True,
-                                          output_file=self._page_name_generator(),
-                                          poppler_path=path_to_poppler_exe)
+            convert_from_path(
+                pdf_file,
+                fmt=self.imgType,
+                dpi=area_grabbing.dpi,
+                output_folder=self.tempDir,
+                paths_only=True,
+                output_file=self._page_name_generator(),
+                poppler_path=path_to_poppler_exe,
+            )
         else:
-            convert_from_path(pdf_file, fmt=self.imgType, dpi=area_grabbing.dpi, 
-                                          output_file=self._page_name_generator(),
-                                          output_folder=self.tempDir, paths_only=True) # Read in the PDF file at 500 DPI
+            convert_from_path(
+                pdf_file,
+                fmt=self.imgType,
+                dpi=area_grabbing.dpi,
+                output_file=self._page_name_generator(),
+                output_folder=self.tempDir,
+                paths_only=True,
+            )  # Read in the PDF file at 500 DPI
 
     def sort_pages(self):
-        #load metadata again, in case user changed something in conversion time
+        # load metadata again, in case user changed something in conversion time
         self._readMetadata()
-        #if not given in metadata, check first page and determine type
+        # if not given in metadata, check first page and determine type
         experimentType = self.metadata["Experiment"]["Type"]
         if experimentType not in ExperimentTypes:
-            RuntimeError(f"Unknown experiment type {experimentType}. Trying to determine type from data ...")
-            #TODO determine type with data
+            RuntimeError(
+                f"Unknown experiment type {experimentType}. Trying to determine type from data ..."
+            )
+            # TODO determine type with data
 
-        #Type should be known now, start parsing
+        # Type should be known now, start parsing
         typeTemplate = GrabExperiment.initType(experimentType)
-        
-        #loop through image files and resort them
+
+        # loop through image files and resort them
         surveyResponses = {}
         nr_pages = typeTemplate.get_num_pages()
         surveyPage = 0
@@ -114,6 +123,7 @@ class pdfConverter():
         files = []
 
         import re
+
         # get all files
         all_files = os.listdir(self.tempDir)
 
@@ -125,8 +135,10 @@ class pdfConverter():
 
         for nr, file_name in enumerate(page_files):
             if surveyPage == 0:
-                participantNr += 1 #start at one
-                currDir = os.path.join(self.mainDir, f"surveyResponse_{participantNr:03}")
+                participantNr += 1  # start at one
+                currDir = os.path.join(
+                    self.mainDir, f"surveyResponse_{participantNr:03}"
+                )
                 if not os.path.isdir(currDir):
                     os.mkdir(currDir)
 
@@ -136,15 +148,19 @@ class pdfConverter():
                 os.rename(pathToFile, os.path.join(currDir, pageName))
                 files.append(pageName)
             else:
-                raise RuntimeError(f"Could not find {pathToFile}. Recheck if expected file names are correct!")
+                raise RuntimeError(
+                    f"Could not find {pathToFile}. Recheck if expected file names are correct!"
+                )
 
             surveyPage += 1
             if surveyPage >= nr_pages:
-                dataFileName = area_grabbing.parse_single_data(currDir, files, typeTemplate)
+                dataFileName = area_grabbing.parse_single_data(
+                    currDir, files, typeTemplate
+                )
                 surveyResponses[f"surveyResponse_{participantNr:03}"] = {
                     "status": "Open",
                     "dir": currDir,
-                    "dataFile": dataFileName
+                    "dataFile": dataFileName,
                 }
                 surveyPage = 0
                 files = []
@@ -155,7 +171,7 @@ class pdfConverter():
         # We're done, update metadata
         self._saveMetadata()
 
-        #and delete temp folder
+        # and delete temp folder
         for file in os.listdir(self.tempDir):
             os.remove(os.path.join(self.tempDir, file))
         os.rmdir(self.tempDir)
@@ -172,44 +188,53 @@ class pdfConverter():
                 break
         area_grabbing.create_diagram_masks(imgPath)
 
+
 def main():
-    """parser = argparse.ArgumentParser(description="Convert PDF to images with optional Optical Character Recognition")
-    parser.add_argument("expDir", type=str, help="Path of the experiment folder to which data is transferred")
-    parser.add_argument("dataIn", type=str, help="Path of the PDF to convert", default="")
+    parser = argparse.ArgumentParser(description="Prepare PDF questionnaires for annotation")
+    parser.add_argument("expDir", type=str, help="Directory containing PDF files to process")
+    parser.add_argument("expType", type=str, help="Experiment type (rope or bottleneck)")
     args = parser.parse_args()
-    
+
     expDir = args.expDir
-    dataInput = args.dataIn
-    """
+    expType = args.expType
 
-    expDir = "data/2026-01-01_Bottleneck"
-    dataInput = ""
+    if expType not in ExperimentTypes:
+        raise RuntimeError(
+            f"Unknown experiment type '{expType}'. Valid types: {list(ExperimentTypes)}"
+        )
 
-    #search for pdfs
-    if dataInput == "":
-        pdfFile = ""
-        metadataFile = ""
-        for file in os.listdir(expDir):
-            # We're expecting a single pdf and in the best case some metadata
-            # If there are several pdf in the dir, this just uses the last it finds
-            if file.endswith(".pdf"):
-                pdfFile = os.path.join(expDir, file)
-            if file.endswith(".json"):
-                metadataFile = file
-    else:
-        pdfFile = dataInput
-        metadataFile = "" #Just assume there is none
+    # Find all PDFs in the directory
+    pdfFiles = sorted(
+        [f for f in os.listdir(expDir) if f.endswith(".pdf")]
+    )
 
-    if pdfFile == "":
-        raise RuntimeError(f"Could not find pdf file in {expDir}.")
-    if metadataFile == "":
-        metadataFile = "metadata.json"
-        warnings.warn(f"Could not find metadata file. Creating new file. Please add experiment description to {metadataFile}")
+    if not pdfFiles:
+        raise RuntimeError(f"Could not find pdf files in {expDir}.")
 
-    converter = pdfConverter(mainDir=expDir, metadataFile=os.path.join(expDir, metadataFile))
-    converter.convert_pages(pdfFile)
-    converter.sort_pages()
-    converter.prepareFigureImg()
+    for pdfFileName in pdfFiles:
+        pdfFile = os.path.join(expDir, pdfFileName)
+
+        # Create a subfolder for each PDF, named after the PDF without extension
+        pdfBaseName = os.path.splitext(pdfFileName)[0]
+        outputDir = os.path.join(expDir, pdfBaseName)
+        os.makedirs(outputDir, exist_ok=True)
+
+        # Write metadata with the correct experiment type
+        metadataFile = os.path.join(outputDir, "metadata.json")
+        metadata = {
+            "Experiment": {"Type": expType, "Name": ""},
+            "Description": "",
+            "Date": "",
+            "Comment": "",
+        }
+        with open(metadataFile, "w") as f:
+            json.dump(metadata, f, indent=4)
+
+        converter = pdfConverter(mainDir=outputDir, metadataFile=metadataFile)
+        converter.convert_pages(pdfFile)
+        converter.sort_pages()
+        converter.prepareFigureImg()
+
 
 if __name__ == "__main__":
     main()
