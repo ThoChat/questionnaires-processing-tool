@@ -151,9 +151,10 @@ class SurveyWindow(qtWid.QWidget):
             painter.setPen(pen)
             for question in self.typeTemplate.get_questions():
                 q_json = self.data.get(str(question.num), {})
-                for cb_template, cb_json in zip(
-                    question.checkboxes, q_json.get("checkboxes", [])
-                ):
+                cb_jsons = q_json.get("checkboxes")
+                if cb_jsons is None:
+                    cb_jsons = [{"answer": False} for _ in question.checkboxes]
+                for cb_template, cb_json in zip(question.checkboxes, cb_jsons):
                     if cb_json.get("answer") and cb_template.page == i:
                         left = int(AnkerPos.X.value + cb_template.dx)
                         top = int(AnkerPos.Y.value + cb_template.dy)

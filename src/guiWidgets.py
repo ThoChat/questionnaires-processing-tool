@@ -432,9 +432,10 @@ class QuestionWidget(qtWid.QFrame):
         elements = []
 
         # checkboxes
-        for cb_template, cb_json in zip(
-            question_template.checkboxes, question_json.get("checkboxes", [])
-        ):
+        cb_jsons = question_json.get("checkboxes")
+        if cb_jsons is None:
+            cb_jsons = [{"answer": False} for _ in question_template.checkboxes]
+        for cb_template, cb_json in zip(question_template.checkboxes, cb_jsons):
             w = BoundCheckBox(cb_template.text, cb_template, cb_json)
             w.focused.connect(self.elementFocused)
             layout.addWidget(w)
@@ -442,9 +443,10 @@ class QuestionWidget(qtWid.QFrame):
             elements.append(cb_template)
 
         # free text
-        for txt_template, txt_json in zip(
-            question_template.texts, question_json.get("textFields", [])
-        ):
+        txt_jsons = question_json.get("textFields")
+        if txt_jsons is None:
+            txt_jsons = [{"text": ""} for _ in question_template.texts]
+        for txt_template, txt_json in zip(question_template.texts, txt_jsons):
             w = BoundTextEdit(txt_template, txt_json)
             w.focused.connect(self.elementFocused)
             w.setFixedHeight(70)
