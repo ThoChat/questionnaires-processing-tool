@@ -7,6 +7,7 @@ __author__ = ["Marvin Lorber", "Alexandra Mielke"]
 from enum import StrEnum, Enum
 from typing import Sequence
 
+
 class ExperimentTypes(StrEnum):
     ROPE = "rope"
     BOTTLENECK = "bottleneck"
@@ -18,6 +19,7 @@ class ExperimentTypes(StrEnum):
             if member.value == value:
                 return member
         return None
+
 
 class DiagramAreas(Enum):
     HEAD = 0
@@ -44,10 +46,12 @@ class DiagramAreas(Enum):
     RIGHT_FOOT = 21
     SOMETHING_ELSE = 99
 
+
 # pixel position of mid of top left AruCo tag
 class AnkerPos(Enum):
     X = 645
     Y = 375
+
 
 class Checkbox:
     size_x: int = 60
@@ -90,18 +94,24 @@ class CheckTable:
 
 
 class Diagramm:
-    def __init__(self, page: int, dx:int = 3317, dy:int = 1850, corner_ids: Sequence[int] = [12, 11, 13, 14]):
+    def __init__(
+        self,
+        page: int,
+        dx: int = 3317,
+        dy: int = 1850,
+        corner_ids: Sequence[int] = [12, 11, 13, 14],
+    ):
         self.page = page
         self.corner_ids = corner_ids
         self.dx = dx
         self.dy = dy
-        self.imgAreas = { # We map colors to body areas, as we later want to get body area back out when feeding in color
+        self.imgAreas = {  # We map colors to body areas, as we later want to get body area back out when feeding in color
             "#E13F48": DiagramAreas.HEAD,
             "#4CBCC3": DiagramAreas.NECK,
             "#7A7A7A": DiagramAreas.BREAST,
-            "#000000": DiagramAreas.UPPER_BACK,
+            "#EBEB64": DiagramAreas.UPPER_BACK,
             "#65BA55": DiagramAreas.LOWER_BACK,
-            "#FE9C11": DiagramAreas.BUTTOCKS, 
+            "#FE9C11": DiagramAreas.BUTTOCKS,
             "#4C6FC3": DiagramAreas.CROTCH,
             "#34DB91": DiagramAreas.STOMACH,
             "#DFA730": DiagramAreas.LEFT_SHOULDER,
@@ -117,8 +127,9 @@ class Diagramm:
             "#DFE13F": DiagramAreas.RIGHT_HAND,
             "#BC4CC3": DiagramAreas.RIGHT_THIGH,
             "#40DF30": DiagramAreas.RIGHT_CALF,
-            "#305FDF": DiagramAreas.RIGHT_FOOT
+            "#305FDF": DiagramAreas.RIGHT_FOOT,
         }
+
 
 class Question:
     def __init__(
@@ -212,8 +223,8 @@ class Bottleneck(Template):
         )
         question7 = Question(
             num=7,
-            questionText="Haben Sie das efuehl, dass die Gruppe eine Strategie/Routine waehrend der letzten Durchlaeufe entwickelt hat," +
-                " wie sie sich durch die Engstellt bewegen?",
+            questionText="Haben Sie das efuehl, dass die Gruppe eine Strategie/Routine waehrend der letzten Durchlaeufe entwickelt hat,"
+            + " wie sie sich durch die Engstellt bewegen?",
             checkboxes=[
                 Checkbox(page=2, dx=37, dy=2487, text="Ja"),
                 Checkbox(page=2, dx=37, dy=2851, text="Nein"),
@@ -231,8 +242,8 @@ class Bottleneck(Template):
         )
         question9 = Question(
             num=9,
-            questionText="Haben Sie sich eher zurueckhaltend oder durchsetzungsstark waehrend " + 
-                "des Durchlaufs verhalten, wenn viele Menschen gleichzeitif durch eine Engstelle wollen?",
+            questionText="Haben Sie sich eher zurueckhaltend oder durchsetzungsstark waehrend "
+            + "des Durchlaufs verhalten, wenn viele Menschen gleichzeitif durch eine Engstelle wollen?",
             checkboxes=[
                 Checkbox(page=2, dx=37, dy=4279, text="sehr zurueckhaltend"),
                 Checkbox(page=2, dx=37, dy=4400, text="eher zurueckhaltend"),
@@ -533,7 +544,7 @@ class GrabExperiment:
 
     @staticmethod
     def get_question_top(question: Question) -> int:
-        # start value at page bottom 
+        # start value at page bottom
         top = 5850
         elements = []
         elements.extend(question.checkboxes)
@@ -546,7 +557,6 @@ class GrabExperiment:
             if e.page <= page and e.dy <= top:
                 page = e.page
                 top = e.dy
-        
+
         result = top + ((page - 1) * 5850)
         return result
-

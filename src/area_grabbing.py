@@ -148,8 +148,8 @@ def find_diagram_edges(img):
         [
             marker_centers[12],  # top-left
             marker_centers[11],  # top-right
-            marker_centers[13],  # bottom-right
-            marker_centers[14],  # bottom-left
+            marker_centers[14],  # bottom-right
+            marker_centers[13],  # bottom-left
         ],
         dtype=np.float32,
     )
@@ -158,20 +158,10 @@ def find_diagram_edges(img):
 
 def create_diagram_masks(path_to_example_diagram):
     imgTemp = cv2.imread("src/ouline_figures_with_label_patches.png")
-    # src_pts = find_diagram_edges(imgTemp) #not possible, white margin missing
-    src_pts = np.array(
-        [
-            [162, 162],  # top-left
-            [3267, 162],  # top-right
-            [3267, 1754],  # bottom-right
-            [162, 1745],  # bottom-left
-        ],
-        dtype=np.float32,
-    )
+    src_pts = find_diagram_edges(imgTemp)
 
     exampleImg = cv2.imread(path_to_example_diagram)
     height, width, depth = exampleImg.shape
-    # dst_pts = find_diagram_edges(exampleImg) #not possible, white margin missing
     dst_pts = np.array(
         [
             [155, 155],  # top-left

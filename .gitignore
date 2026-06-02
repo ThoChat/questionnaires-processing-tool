@@ -16,3 +16,4 @@ wheels/
 data/
 src/outline_figures.pickle
 src/areaMapping.png
+test_data/
