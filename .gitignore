@@ -17,3 +17,5 @@ data/
 src/outline_figures.pickle
 src/areaMapping.png
 test_data/
+processing_pie.py
+questionnaire_progress*

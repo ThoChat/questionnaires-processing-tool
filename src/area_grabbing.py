@@ -237,7 +237,7 @@ def parse_single_data(imgDir, files, template: Template) -> str:
         pages[page_nr] = Page(page_nr, img, corners, ids)
 
     subjectData = {
-        "participantNr": 0,
+        "participantNr": 0,  # filled in manually in the GUI, 0 = not filled yet
     }
 
     for question in template.get_questions():

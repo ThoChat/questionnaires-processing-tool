@@ -49,6 +49,8 @@ The current output folder structure after parsing is shown below. Changes are po
 
 The Gui is started from [annotateData](/annotateData.py). This is just a starter though, the GUI's main windows can be found in [guiWindows.py](/src/guiWindows.py) and the widgets shown within the Windows can be found in [guiWidgets.py](/src/guiWidgets.py).
 
+The first entry of the question list is the **Participant number**, i.e. the number the participant wrote on the form. It is different from the `surveyResponse_<nr>` number and allows to identify the same participant across different forms. It is stored as `participantNr` in the survey's `surveyData.json` (`0` if not filled yet).
+
 ### Optical character recognition
 
 To detect single lines of printed writing, use `ocr()` in [ocr.py](/src/ocr.py). For detection of handwriting try out `recognize_handwriting()` in [htr.py](/src/htr.py). `htr.py` requires additional pip libraries that are currently commented out in the pyproject.toml

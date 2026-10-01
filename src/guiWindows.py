@@ -12,7 +12,7 @@ from PyQt5 import QtGui, QtCore
 import qdarktheme
 
 from src.survey_templates import GrabExperiment, AnkerPos
-from src.guiWidgets import ImagePage, NoHorizontalScrollArea, QuestionWidget, SnappingScrollBar, SurveyEntryWidget
+from src.guiWidgets import ImagePage, NoHorizontalScrollArea, ParticipantNumberWidget, QuestionWidget, SnappingScrollBar, SurveyEntryWidget
 from src.guiIO import readData, saveData
 
 # ---------------------------
@@ -257,12 +257,21 @@ class SurveyWindow(qtWid.QWidget):
         scroll_ticks_left = []
         self.scroll_ticks_right = [] #we need these later for the image
         bottom_of_last_question = 0
+
+        # participant number is written at the top of the form, so it comes first
+        widgets = []
+        participantNr = self.typeTemplate.get_participant_number()
+        if participantNr is not None:
+            top = participantNr.dy + (participantNr.page - 1) * 5850
+            widgets.append((ParticipantNumberWidget(participantNr, self.data), top))
         for q in questions:
-            current_top = GrabExperiment.get_question_top(q)
-            scroll_ticks_left.append(bottom_of_last_question)
-            self.scroll_ticks_right.append(int(current_top))
             q_json = self.data[str(q.num)]
             qw = QuestionWidget(q, q_json, self.maxWidgetWidth)
+            widgets.append((qw, GrabExperiment.get_question_top(q)))
+
+        for qw, current_top in widgets:
+            scroll_ticks_left.append(bottom_of_last_question)
+            self.scroll_ticks_right.append(max(0, int(current_top)))
             qw.elementFocused.connect(self.highlight_element)
             self.questions.append(qw)
             self.questionLayout.addWidget(qw)
@@ -303,7 +312,7 @@ class SurveyWindow(qtWid.QWidget):
                 self.scroll_to_question(next_q)
 
                 # focus first widget in question
-                child = next_q.findChild((qtWid.QCheckBox, qtWid.QTextEdit))
+                child = next_q.findChild((qtWid.QCheckBox, qtWid.QTextEdit, qtWid.QLineEdit))
                 if child:
                     child.setFocus()
                 break

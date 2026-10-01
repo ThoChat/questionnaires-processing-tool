@@ -73,6 +73,18 @@ class Freetext:
         self.size_y = size_y
 
 
+class ParticipantNumber:
+    """Area at the top of the form where the participant number is written.
+    Only used to show the area in the GUI, the number itself is typed in manually."""
+
+    def __init__(self, page: int, dx: int, dy: int, size_x: int, size_y: int):
+        self.page = page
+        self.dx = dx
+        self.dy = dy
+        self.size_x = size_x
+        self.size_y = size_y
+
+
 class CheckTable:
     def __init__(
         self,
@@ -155,6 +167,9 @@ class Template:
 
     def get_questions(self) -> Sequence[Question]:
         return []
+
+    def get_participant_number(self) -> ParticipantNumber | None:
+        return None
 
 
 class Bottleneck(Template):
@@ -450,6 +465,10 @@ class Bottleneck(Template):
     def get_questions(self) -> Sequence[Question]:
         return self.questions
 
+    def get_participant_number(self) -> ParticipantNumber:
+        # "Nummer" boxes below the title
+        return ParticipantNumber(page=1, dx=855, dy=185, size_x=465, size_y=200)
+
 
 class Rope(Template):
     def __init__(self) -> None:
@@ -506,6 +525,10 @@ class Rope(Template):
 
     def get_questions(self) -> Sequence[Question]:
         return self.questions
+
+    def get_participant_number(self) -> ParticipantNumber:
+        # some forms have "Nummer" boxes, on others the number is written anywhere in the header
+        return ParticipantNumber(page=1, dx=-245, dy=-325, size_x=3550, size_y=710)
 
 
 class GrabExperiment:

@@ -145,6 +145,38 @@ class BoundTextEdit(qtWid.QTextEdit):
         super().focusInEvent(e)
 
 
+class BoundParticipantNrEdit(qtWid.QLineEdit):
+    focused = QtCore.pyqtSignal(object)
+
+    def __init__(self, template, json_ref):
+        super().__init__()
+
+        self.template = template
+        self.json_ref = json_ref
+
+        # participantNr 0 means not filled in yet
+        participantNr = json_ref.get("participantNr", 0)
+        self.setText(str(participantNr) if participantNr else "")
+        self.setValidator(QtGui.QIntValidator(0, 999999))
+        self.setMaximumWidth(200)
+
+        self.textChanged.connect(self.write_json)
+
+    def write_json(self, text):
+        self.json_ref["participantNr"] = int(text) if text else 0
+
+    def focusInEvent(self, e):
+        self.focused.emit(self.template)
+        super().focusInEvent(e)
+
+    def keyPressEvent(self, e):
+        # move on to the first question, like up/down between checkboxes
+        if e.key() in (QtCore.Qt.Key_Down, QtCore.Qt.Key_Return, QtCore.Qt.Key_Enter):
+            self.focusNextChild()
+        else:
+            super().keyPressEvent(e)
+
+
 class ClickableImageLabel(qtWid.QLabel):
     clicked = QtCore.pyqtSignal(int, int, bool)
 
@@ -486,6 +518,38 @@ class QuestionWidget(qtWid.QFrame):
 
     def sizeHint(self):
         return super().sizeHint()
+
+
+# ---------------------------
+# Participant Number Widget
+# ---------------------------
+
+
+class ParticipantNumberWidget(qtWid.QFrame):
+    """Entry for the participant number written at the top of the form, shown like a question."""
+
+    elementFocused = QtCore.pyqtSignal(object)
+
+    def __init__(self, template, survey_json):
+        super().__init__()
+
+        self.setSizePolicy(qtWid.QSizePolicy.Ignored, qtWid.QSizePolicy.Maximum)
+
+        layout = qtWid.QVBoxLayout()
+
+        title = qtWid.QLabel("Participant number")
+        title.setStyleSheet("font-weight:bold")
+        layout.addWidget(title)
+
+        w = BoundParticipantNrEdit(template, survey_json)
+        w.focused.connect(self.elementFocused)
+        layout.addWidget(w)
+
+        self.setLayout(layout)
+
+        self.template_page = template.page
+        self.template_top = template.dy
+        self.template_bottom = template.dy + template.size_y
 
 
 # ---------------------------
