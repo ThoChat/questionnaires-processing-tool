@@ -60,6 +60,7 @@ class SurveyWindow(qtWid.QWidget):
         buttonLayout.addWidget(weirdButton)
 
         mainLayout.addLayout(buttonLayout)
+        self.buttonLayout = buttonLayout
 
         # Save shortcut
         saveShortcut = qtWid.QShortcut(QtGui.QKeySequence("Ctrl+S"), self)
@@ -189,7 +190,9 @@ class SurveyWindow(qtWid.QWidget):
         for p in self.pageWidgets:
             p.set_highlight(None)
 
-        page_widget = self.pageWidgets[page - 1]
+        page_widget = self.get_page_widget(page)
+        if page_widget is None:
+            return
 
         if hasattr(element, "size_x"):
             w = element.size_x
@@ -206,6 +209,9 @@ class SurveyWindow(qtWid.QWidget):
         )
         page_widget.set_highlight(rect)
         self.center_on(page_widget, rect)
+
+    def get_page_widget(self, page):
+        return self.pageWidgets[page - 1]
 
     def get_page_widget_heights(self):
         heights = {}
@@ -367,17 +373,39 @@ class CommentWindow(qtWid.QWidget):
 
 
 class MainWindow(qtWid.QWidget):
+    # key of the survey status in metadata.json and window used to annotate a survey
+    statusKey = "status"
+    surveyWindowClass = SurveyWindow
+
     def __init__(self, experimentDir: str):
         super().__init__()
 
         self.metadataPath = os.path.join(experimentDir, "metadata.json")
         self.metadata = readData(self.metadataPath)
         self.experimentDir = experimentDir
+        self.surveyWindow = None
+        self.sortMode = "Status"
 
         # QT stuff
         self.setWindowTitle("Survey Digitizer")
 
         layout = qtWid.QVBoxLayout()
+
+        # ---- SORT BUTTONS ----
+        sortLayout = qtWid.QHBoxLayout()
+        sortLayout.addWidget(qtWid.QLabel("Sort by:"))
+        self.sortButtons = qtWid.QButtonGroup(self)
+        for mode in ("Status", "Survey name", "Participant number"):
+            button = qtWid.QPushButton(mode)
+            button.setCheckable(True)
+            button.setChecked(mode == self.sortMode)
+            self.sortButtons.addButton(button)
+            sortLayout.addWidget(button)
+        self.sortButtons.buttonClicked.connect(self.change_sort)
+        sortLayout.addStretch()
+        self.countLabel = qtWid.QLabel()
+        sortLayout.addWidget(self.countLabel)
+        layout.addLayout(sortLayout)
 
         scroll = qtWid.QScrollArea()
         scroll.setWidgetResizable(True)
@@ -393,28 +421,56 @@ class MainWindow(qtWid.QWidget):
         layout.addWidget(scroll)
         self.setLayout(layout)
 
+    def get_status(self, surveyMetadata):
+        return surveyMetadata.get(self.statusKey, "Open")
+
     def sortSurveys(self):
         # Sort entries
         order = {"Open": 0, "Needs checking": 1, "Done": 2}
         return sorted(
             self.metadata["surveyResponses"].items(),
-            key=lambda x: order[x[1]["status"]],
+            key=lambda x: order[self.get_status(x[1])],
         )
 
+    def change_sort(self, button):
+        self.sortMode = button.text()
+        self.rebuild_list()
+
     def open_survey(self, name):
-        self.surveyWindow = SurveyWindow(
+        # a second window of the same survey would overwrite the entries of the first one when closed
+        if self.surveyWindow is not None and self.surveyWindow.isVisible() and self.surveyWindow.name == name:
+            self.surveyWindow.raise_()
+            self.surveyWindow.activateWindow()
+            return
+
+        self.surveyWindow = self.surveyWindowClass(
             name,
             self.metadata["surveyResponses"][name]["dir"],
             GrabExperiment.initType(self.metadata["Experiment"]["Type"]),
-            self.metadata["surveyResponses"][name]["status"],
+            self.get_status(self.metadata["surveyResponses"][name]),
         )
         self.surveyWindow.surveyClosed.connect(self.update_survey_status)
         self.surveyWindow.show()
 
     def update_survey_status(self, name, new_status):
-        self.metadata["surveyResponses"][name]["status"] = new_status
+        self.metadata["surveyResponses"][name][self.statusKey] = new_status
         saveData(os.path.join(self.experimentDir, "metadata.json"), self.metadata)
         self.rebuild_list()
+
+        # after "Done" or "Report weird things" continue with the next open survey
+        if new_status in ("Done", "Needs checking"):
+            next_name = self.next_open_survey(name)
+            if next_name is not None:
+                self.open_survey(next_name)
+
+    def next_open_survey(self, name):
+        """Next survey after name (in survey order) that is still open, starting over at the beginning if needed."""
+        shown = self.sortSurveys()[: self.metadata["participants"]]
+        open_names = sorted(n for n, data in shown if self.get_status(data) == "Open")
+        later = [n for n in open_names if n > name]
+        if later:
+            return later[0]
+        return open_names[0] if open_names else None
 
     def rebuild_list(self):
         # remove old widgets
@@ -424,20 +480,43 @@ class MainWindow(qtWid.QWidget):
             if w:
                 w.deleteLater()
 
-        sorted_items = self.sortSurveys()
-        for name, data in sorted_items[: self.metadata["participants"]]:
-            w = SurveyEntryWidget(name, data["status"])
+        entries = []
+        for name, data in self.sortSurveys()[: self.metadata["participants"]]:
+            surveyData = readData(os.path.join(data["dir"], data.get("dataFile", "surveyData.json")))
+            entries.append((name, data, surveyData.get("participantNr"), surveyData.get("comment", "")))
+
+        # sortSurveys already sorts by status
+        if self.sortMode == "Survey name":
+            entries.sort(key=lambda e: e[0])
+        elif self.sortMode == "Participant number":
+            # surveys without a number (None) at the end
+            entries.sort(key=lambda e: (e[2] is None, e[2] or 0, e[0]))
+
+        # surveys sharing a participant number, probably a typo in one of them
+        surveysByNr = {}
+        for name, _, participantNr, _ in entries:
+            if participantNr is not None:
+                surveysByNr.setdefault(participantNr, []).append(name)
+
+        for name, data, participantNr, comment in entries:
+            duplicates = [n for n in surveysByNr.get(participantNr, []) if n != name]
+            w = SurveyEntryWidget(name, self.get_status(data), participantNr, comment, duplicates)
             w.clicked.connect(self.open_survey)
             self.vbox.addWidget(w)
 
         self.vbox.addStretch()
 
+        statuses = [self.get_status(data) for _, data, _, _ in entries]
+        done = statuses.count("Done")
+        weird = statuses.count("Needs checking")
+        self.countLabel.setText(f"Processed: {done + weird} / {len(statuses)}   (done {done}, weird {weird})")
 
-def main(experimentDir):
+
+def main(experimentDir, windowClass=MainWindow):
     app = qtWid.QApplication(sys.argv)
     qdarktheme.setup_theme()
 
-    window = MainWindow(experimentDir)
+    window = windowClass(experimentDir)
     window.resize(900, 600)
     window.show()
 

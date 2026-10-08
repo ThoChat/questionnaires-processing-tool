@@ -49,7 +49,13 @@ The current output folder structure after parsing is shown below. Changes are po
 
 The Gui is started from [annotateData](/annotateData.py). This is just a starter though, the GUI's main windows can be found in [guiWindows.py](/src/guiWindows.py) and the widgets shown within the Windows can be found in [guiWidgets.py](/src/guiWidgets.py).
 
-The first entry of the question list is the **Participant number**, i.e. the number the participant wrote on the form. It is different from the `surveyResponse_<nr>` number and allows to identify the same participant across different forms. It is stored as `participantNr` in the survey's `surveyData.json` (`0` if not filled yet).
+The first entry of the question list is the **Participant number**, i.e. the number the participant wrote on the form. It is different from the `surveyResponse_<nr>` number and allows to identify the same participant across different forms. It is stored as `participantNr` in the survey's `surveyData.json` (`null` if not filled yet, as `0` is a valid participant number).
+
+After `Done` or `Report weird things and go back`, the survey closes and the next survey that is still `Open` opens automatically. `Not done yet, but go back` only closes the survey. The survey list shows the participant number and the comment of each survey next to its name (hover over a long comment to see all of it), and a ⚠ warning if another survey of the experiment has the same participant number.
+
+### Contact GUI
+
+[annotateContacts](/annotateContacts.py) starts a simpler version of the GUI that only shows the participant number and the contact questions (body diagram and table), next to the top of the first page and the pages of the contact questions. It is started the same way, e.g. `python annotateContacts.py data/Bottleneck/Bottleneck_Dienstag_1`, and edits the same `surveyData.json`. Its progress is stored separately as `contactStatus` in `metadata.json`, so finishing the contacts does not change the `status` of the full survey. Surveys without a `contactStatus` show their full survey `status`, as the full GUI covers the contacts too.
 
 ### Optical character recognition
 

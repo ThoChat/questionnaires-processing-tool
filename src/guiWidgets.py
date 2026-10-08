@@ -154,16 +154,16 @@ class BoundParticipantNrEdit(qtWid.QLineEdit):
         self.template = template
         self.json_ref = json_ref
 
-        # participantNr 0 means not filled in yet
-        participantNr = json_ref.get("participantNr", 0)
-        self.setText(str(participantNr) if participantNr else "")
+        # participantNr None means not filled in yet, 0 is a valid number
+        participantNr = json_ref.get("participantNr")
+        self.setText("" if participantNr is None else str(participantNr))
         self.setValidator(QtGui.QIntValidator(0, 999999))
         self.setMaximumWidth(200)
 
         self.textChanged.connect(self.write_json)
 
     def write_json(self, text):
-        self.json_ref["participantNr"] = int(text) if text else 0
+        self.json_ref["participantNr"] = int(text) if text else None
 
     def focusInEvent(self, e):
         self.focused.emit(self.template)
@@ -336,6 +336,9 @@ class BoundDiagramWidget(qtWid.QWidget):
 
 
 class BoundTableWidget(qtWid.QFrame):
+    # emits the template table of the column that is being edited
+    focused = QtCore.pyqtSignal(object)
+
     def __init__(self, template, json_ref):
         super().__init__()
 
@@ -386,6 +389,8 @@ class BoundTableWidget(qtWid.QFrame):
             # ---- CREATE DROPDOWNS ----
             for col_index in range(3):
                 combo = qtWid.QComboBox()
+                combo.setProperty("column", col_index)
+                combo.installEventFilter(self)
 
                 # add placeholder first
                 combo.addItem("-- select --")
@@ -433,6 +438,13 @@ class BoundTableWidget(qtWid.QFrame):
 
             for combo in combos:
                 combo.currentIndexChanged.connect(cb)
+
+    def eventFilter(self, obj, e):
+        if e.type() in (QtCore.QEvent.FocusIn, QtCore.QEvent.MouseButtonPress):
+            col_index = obj.property("column")
+            if col_index is not None:
+                self.focused.emit(self.template.tables[col_index])
+        return super().eventFilter(obj, e)
 
 
 # ---------------------------
@@ -560,7 +572,7 @@ class ParticipantNumberWidget(qtWid.QFrame):
 class SurveyEntryWidget(qtWid.QFrame):
     clicked = QtCore.pyqtSignal(str)
 
-    def __init__(self, name, status):
+    def __init__(self, name, status, participantNr=None, comment="", duplicates=()):
         super().__init__()
 
         self.name = name
@@ -571,17 +583,42 @@ class SurveyEntryWidget(qtWid.QFrame):
 
         layout = qtWid.QHBoxLayout()
 
-        self.label = qtWid.QLabel(name)
+        # participantNr None means not filled in yet
+        label = name if participantNr is None else f"{name}   (participant {participantNr})"
+        self.label = qtWid.QLabel(label)
         self.statusLabel = qtWid.QLabel(status)
 
+        # operator comment about what might be weird, on one line (full text in the tooltip)
+        comment = (comment or "").strip()
+        self.commentLabel = qtWid.QLabel(" ".join(comment.split()))
+        self.commentLabel.setStyleSheet("border: none; font-style: italic;")
+        self.commentLabel.setToolTip(comment)
+        self.commentLabel.setSizePolicy(qtWid.QSizePolicy.Ignored, qtWid.QSizePolicy.Preferred)
+
         layout.addWidget(self.label)
-        layout.addStretch()
+
+        # other surveys with the same participant number
+        if duplicates:
+            self.duplicateLabel = qtWid.QLabel(
+                "\u26a0 same nr as " + ", ".join(n.split("_")[-1] for n in duplicates)
+            )
+            self.duplicateLabel.setStyleSheet("border: none; color: orange; font-weight: bold;")
+            self.duplicateLabel.setToolTip("Participant number also used by:\n" + "\n".join(duplicates))
+            layout.addSpacing(10)
+            layout.addWidget(self.duplicateLabel)
+
+        layout.addSpacing(20)
+        layout.addWidget(self.commentLabel, 1)
         layout.addWidget(self.statusLabel)
 
         self.setLayout(layout)
 
     def mousePressEvent(self, event):
         self.clicked.emit(self.name)
+
+    def mouseDoubleClickEvent(self, event):
+        # Qt treats the second click of a double click as another press, which would open the survey twice
+        pass
 
 
 # ---------------------------
