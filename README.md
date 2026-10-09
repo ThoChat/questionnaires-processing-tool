@@ -18,7 +18,7 @@ The project has two main python scripts. One to prepare data for the GUI and the
 
 Run [prepareData](/prepareData.py) to convert the survey PDF into images, create metadata files and extract survey data. This extraction is needed to parse the data into a format suitable for the GUI. 
 
-The script requires at least the experiment's directory. It expects a single PDF file in this directory and, optionally, a json metadata file. Should there be several PDF in the folder, than only the last found PDF is converted. Please be aware that big PDF will need quite some time to be parsed. If there was no metadata.json when first parsing data, this file will be created. Currently there is no automatic detection of the experiment type, so you have to add this information into `metadata.json`. You should have enough time to do this when the PDF are parsed. Otherwise you'll run into a run time error, but don't worry, just add the info and run again. The images will be kept and you won't need to wait again.
+The script requires at least the experiment's directory. It expects a single PDF file in this directory and, optionally, a json metadata file. Should there be several PDF in the folder, than only the last found PDF is converted. Please be aware that big PDF will need quite some time to be parsed. If the number of pages of the PDF is not a multiple of the number of pages of a survey, a warning is printed: pages are missing in the scan and the surveys after them are shifted. The incomplete last survey is still created, with status `Needs checking` and a comment. If there was no metadata.json when first parsing data, this file will be created. Currently there is no automatic detection of the experiment type, so you have to add this information into `metadata.json`. You should have enough time to do this when the PDF are parsed. Otherwise you'll run into a run time error, but don't worry, just add the info and run again. The images will be kept and you won't need to wait again.
 
 ```metadata.json
 "Experiment": {
@@ -26,6 +26,8 @@ The script requires at least the experiment's directory. It expects a single PDF
         "Name": ""
     },
 ```
+
+The experiment types are `bottleneck`, `rope` and `rope_short`. `rope_short` is for Rope sessions in which only the two contact pages of the Bottleneck form (pages 5 and 6) were used instead of the Rope form, e.g. Rope_Montag and Rope_Dienstag. A survey whose form differs from the rest of the experiment gets its own `"type"` in its entry of `surveyResponses` in `metadata.json`; the GUI then uses that template for it.
 
 The current output folder structure after parsing is shown below. Changes are possible, but please remember to change the respective experiment directories listed in the experiment's `metadata.json` as well.
 

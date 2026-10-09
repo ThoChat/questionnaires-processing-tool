@@ -240,6 +240,19 @@ def parse_single_data(imgDir, files, template: Template) -> str:
         "participantNr": None,  # filled in manually in the GUI, None = not filled yet
     }
 
+    # darkness of the empty checkboxes of each page, for templates whose scans are too dark for the fixed threshold
+    baseline = {}
+    if template.checkbox_margin is not None and not deskew_failed:
+        grades = {}
+        for question in template.get_questions():
+            for checkbox in question.checkboxes:
+                if checkbox.page in pages:
+                    top = int(AnkerPos.Y.value + checkbox.dy)
+                    left = int(AnkerPos.X.value + checkbox.dx)
+                    checkbox_img = pages[checkbox.page].img[top : top + 70, left : left + 60]
+                    grades.setdefault(checkbox.page, []).append(non_background_percentage(checkbox_img))
+        baseline = {page: float(np.median(g)) for page, g in grades.items()}
+
     for question in template.get_questions():
         checkboxData = []
         textfieldData = []
@@ -247,6 +260,10 @@ def parse_single_data(imgDir, files, template: Template) -> str:
 
         if not deskew_failed:
             for checkbox in question.checkboxes:
+                if checkbox.page not in pages:
+                    # page missing in the scan
+                    checkboxData.append({"text": checkbox.text, "answer": False})
+                    continue
                 top = int(AnkerPos.Y.value + checkbox.dy)
                 left = int(AnkerPos.X.value + checkbox.dx)
 
@@ -255,6 +272,8 @@ def parse_single_data(imgDir, files, template: Template) -> str:
                 ]
                 grade = non_background_percentage(checkbox_img)
                 checked = grade > threshold
+                if checkbox.page in baseline:
+                    checked = checked and grade > baseline[checkbox.page] + template.checkbox_margin
                 checkboxData.append(
                     {
                         "text": checkbox.text,
@@ -272,6 +291,9 @@ def parse_single_data(imgDir, files, template: Template) -> str:
                 print(f"Question {question.num}-{checkbox.text}:{grade}")
 
             for textfield in question.texts:
+                if textfield.page not in pages:
+                    textfieldData.append({"text": "", "file": ""})
+                    continue
                 top = int(AnkerPos.Y.value + textfield.dy)
                 left = int(AnkerPos.X.value + textfield.dx)
 
@@ -285,6 +307,10 @@ def parse_single_data(imgDir, files, template: Template) -> str:
                 textfieldData.append({"text": "", "file": filePath})
 
             for table in question.tables:
+                if table.page not in pages:
+                    # empty table, so the remaining tables keep their position in the merge below
+                    tableData.append({"name": f"Table_{table.page}_{question.num}", "data": {}})
+                    continue
                 top = int(AnkerPos.Y.value + table.dy)
                 step_y = int(table.size_y / len(table.rows))
                 table_result = {}
@@ -348,7 +374,7 @@ def parse_single_data(imgDir, files, template: Template) -> str:
         pathToDiagram = ""
         for diagramm in question.diagramms:
             diagramExtracted = False
-            if not deskew_failed:
+            if not deskew_failed and diagramm.page in pages:
                 img = extract_diagramm(diagramm, pages[diagramm.page])
                 if img is not None:
                     pathToDiagram = os.path.join(

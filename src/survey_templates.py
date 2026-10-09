@@ -4,6 +4,7 @@
 __license__ = "MIT"
 __author__ = ["Marvin Lorber", "Alexandra Mielke"]
 
+import copy
 from enum import StrEnum, Enum
 from typing import Sequence
 
@@ -11,6 +12,8 @@ from typing import Sequence
 class ExperimentTypes(StrEnum):
     ROPE = "rope"
     BOTTLENECK = "bottleneck"
+    # Rope sessions that used only the two contact pages of the Bottleneck form
+    ROPE_SHORT = "rope_short"
 
     @classmethod
     def _missing_(cls, value):
@@ -162,6 +165,10 @@ class Question:
 
 
 class Template:
+    # if set, a checkbox only counts as ticked if it is this many percentage points darker than the empty
+    # checkboxes of its page (median of all checkboxes of the page), for scans too dark for the fixed threshold
+    checkbox_margin: float | None = None
+
     def get_num_pages(self) -> int:
         return 0
 
@@ -531,6 +538,36 @@ class Rope(Template):
         return ParticipantNumber(page=1, dx=-245, dy=-325, size_x=3550, size_y=710)
 
 
+class RopeShort(Template):
+    """Form used in some Rope sessions instead of the Rope form: only the two contact pages (pages 5 and 6)
+    of the Bottleneck form, so the questions and positions are those of Bottleneck questions 17-19 on pages 1-2."""
+
+    first_page = 5  # page of the Bottleneck form that is page 1 here
+    # these scans are darker: empty checkboxes are ~25% non-background, ticked ones ~35-65%
+    checkbox_margin = 10
+
+    def __init__(self) -> None:
+        self.questions = []
+        for question in Bottleneck().get_questions():
+            elements = [*question.checkboxes, *question.texts, *question.diagramms, *question.tables]
+            if not elements or min(e.page for e in elements) < self.first_page:
+                continue
+            question = copy.deepcopy(question)
+            for e in [*question.checkboxes, *question.texts, *question.diagramms, *question.tables]:
+                e.page -= self.first_page - 1
+            self.questions.append(question)
+
+    def get_num_pages(self) -> int:
+        return 2
+
+    def get_questions(self) -> Sequence[Question]:
+        return self.questions
+
+    def get_participant_number(self) -> ParticipantNumber:
+        # no "Nummer" boxes, the number is written somewhere in the header, often at the very top of the page
+        return ParticipantNumber(page=1, dx=-245, dy=-375, size_x=3550, size_y=760)
+
+
 class GrabExperiment:
     @staticmethod
     def initType(experimentType: str) -> Template:
@@ -538,6 +575,8 @@ class GrabExperiment:
             return Rope()
         elif experimentType == ExperimentTypes.BOTTLENECK:
             return Bottleneck()
+        elif experimentType == ExperimentTypes.ROPE_SHORT:
+            return RopeShort()
         else:
             raise RuntimeError("Unknown experiment type.")
 

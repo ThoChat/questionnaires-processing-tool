@@ -133,6 +133,13 @@ class pdfConverter:
         # now sort in page numbers
         page_files.sort(key=lambda x: int(re.search(r"\d+", x).group()))
 
+        if len(page_files) % nr_pages != 0:
+            print(
+                f"Warning: {len(page_files)} pages is not a multiple of {nr_pages} pages per survey. "
+                "Pages are missing in the scan and the surveys after them are shifted. "
+                "Check the page order of the surveys!"
+            )
+
         for nr, file_name in enumerate(page_files):
             if surveyPage == 0:
                 participantNr += 1  # start at one
@@ -165,6 +172,24 @@ class pdfConverter:
                 surveyPage = 0
                 files = []
 
+        if surveyPage != 0:
+            # the PDF ended in the middle of a survey, register it anyway so it shows up in the GUI
+            dataFileName = area_grabbing.parse_single_data(currDir, files, typeTemplate)
+            dataPath = os.path.join(currDir, dataFileName)
+            with open(dataPath, "r") as f:
+                surveyData = json.load(f)
+            surveyData["comment"] = (
+                f"Only {surveyPage} of {nr_pages} pages in the scan. Pages are missing somewhere in the PDF, "
+                "check the page order of this and the previous surveys."
+            )
+            with open(dataPath, "w") as f:
+                json.dump(surveyData, f, indent=4)
+            surveyResponses[f"surveyResponse_{participantNr:03}"] = {
+                "status": "Needs checking",
+                "dir": currDir,
+                "dataFile": dataFileName,
+            }
+
         self.metadata["participants"] = participantNr
         self.metadata["surveyResponses"] = surveyResponses
 
@@ -192,7 +217,7 @@ class pdfConverter:
 def main():
     parser = argparse.ArgumentParser(description="Prepare PDF questionnaires for annotation")
     parser.add_argument("expDir", type=str, help="Directory containing PDF files to process")
-    parser.add_argument("expType", type=str, help="Experiment type (rope or bottleneck)")
+    parser.add_argument("expType", type=str, help="Experiment type (rope, bottleneck or rope_short)")
     args = parser.parse_args()
 
     expDir = args.expDir

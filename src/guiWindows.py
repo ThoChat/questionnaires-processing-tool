@@ -424,6 +424,10 @@ class MainWindow(qtWid.QWidget):
     def get_status(self, surveyMetadata):
         return surveyMetadata.get(self.statusKey, "Open")
 
+    def get_type(self, surveyMetadata):
+        # a survey can have another form than the rest of the experiment
+        return surveyMetadata.get("type", self.metadata["Experiment"]["Type"])
+
     def sortSurveys(self):
         # Sort entries
         order = {"Open": 0, "Needs checking": 1, "Done": 2}
@@ -446,7 +450,7 @@ class MainWindow(qtWid.QWidget):
         self.surveyWindow = self.surveyWindowClass(
             name,
             self.metadata["surveyResponses"][name]["dir"],
-            GrabExperiment.initType(self.metadata["Experiment"]["Type"]),
+            GrabExperiment.initType(self.get_type(self.metadata["surveyResponses"][name])),
             self.get_status(self.metadata["surveyResponses"][name]),
         )
         self.surveyWindow.surveyClosed.connect(self.update_survey_status)
